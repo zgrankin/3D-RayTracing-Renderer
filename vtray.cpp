@@ -9,10 +9,11 @@ using namespace std;
 int main(int argc, char *argv[])
 {
 	//JSONParser a;
-	Render b("scene0.json");
 	//a.readFile("scene1.json");
 	//a.pullAllInfo();
 	//a.printAllInfo();
+	Render b("scene0.json");
+	b.calculateIntersect();
 	b.createImage("output.png");
 	
 	return 0;
