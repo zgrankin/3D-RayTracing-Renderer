@@ -15,6 +15,8 @@ find_package(Qt5 COMPONENTS Gui REQUIRED)
 set(src
 	json_parser.cpp
 	json_parser.hpp
+	render_image.cpp
+	render_image.hpp
   )
 
 # EDIT: add any additional test source files to this list

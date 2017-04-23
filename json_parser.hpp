@@ -15,8 +15,19 @@ struct Location {
 	double z;
 };
 
+struct Color {
+	double r;
+	double g;
+	double b;
+};
+
+
 struct Camera {
-	
+	Location center;
+	Location normal;
+	double focus;
+	pair<double, double> resolution;	
+	pair<double, double> size;
 };
 
 struct Lights {
@@ -25,7 +36,13 @@ struct Lights {
 };
 
 struct Objects {
+	string type;
+	Location center;
+	Color color;
+	double lambert;
 
+	double radius;
+	Location normal;
 };
 
 
@@ -35,7 +52,7 @@ public:
 	JSONParser();
 	~JSONParser();
 
-	void readAll(QString filename);
+	void readFile(QString filename);
 
 	void pullCameraInfo();
 
@@ -43,11 +60,28 @@ public:
 
 	void pullObjectInfo();
 
-	vector<Lights> lightsVect;
+	void pullAllInfo();
+
+	void printLightsInfo();
+
+	void printCameraInfo();
+
+	void printObjectsInfo();
+
+	void printAllInfo();
+
+	Camera returnCamera();
+
+	vector<Lights> returnLightsVect();
+
+	vector<Objects> returnObjectsVect();
 
 private:
 	QJsonDocument document;
 	QJsonObject renderInfo;
+	Camera camera;
+	vector<Lights> lightsVect;
+	vector<Objects> objectsVect;
 };
 
 #endif
