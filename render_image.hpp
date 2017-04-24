@@ -10,7 +10,6 @@ using namespace std;
 struct PointNColor {
 	Location point;
 	Color color;
-	bool bad = false;
 };
 
 
@@ -54,6 +53,7 @@ private:
 	vector<Objects> objectsVect;
 	vector<PointNColor> pixels;
 	Color black;
+	Color white;
 	PointNColor intersectionP;
 	double currentObjectLambert;
 	double currentObjectNumber;

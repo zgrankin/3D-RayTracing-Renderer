@@ -16,6 +16,9 @@ Render::Render(string filename)
 	black.r = 0;
 	black.g = 0;
 	black.b = 0;
+	white.r = 255;
+	white.g = 255;
+	white.b = 255;
 }
 
 Render::~Render()
@@ -201,7 +204,7 @@ bool Render::calculateIntersect(Location point)
 		}
 		else if (objectsVect[objNumber].type == "plane") {
 			intersect.point = findIntersectPlane(objectsVect[objNumber].center, objNumber, point);
-			if (intersect.bad == false) {
+			if (intersect.point.bad == false) {
 				intersect.color = objectsVect[objNumber].color;
 				ip.push_back(intersect);
 				objLambertVect.push_back(objectsVect[objNumber].lambert);
@@ -227,9 +230,12 @@ bool Render::determineClosestObject(vector<PointNColor> ip, vector<double> objLa
 		double maggy;
 		maggy = magnitude(findL(ip[0].point, findFocalPoint()));
 		minMagIndex = 0;
+		double newMag;
 		for (unsigned int i = 1; i < ip.size(); i++)
 		{
-			if (magnitude(findL(ip[i].point, findFocalPoint())) <= maggy) {
+			newMag = magnitude(findL(ip[i].point, findFocalPoint()));
+			if (newMag <= maggy) {
+				maggy = newMag;
 				minMagIndex = i;
 			}
 		}
@@ -342,18 +348,29 @@ Color Render::findLightContributionPlane(Location crossPoint, Location centerPla
 Location Render::findIntersectPlane(Location centerPlane, double objNumber, Location point)
 {
 	Location rayDu = findDuv(point, findFocalPoint()); // equivalent to Ru in diagram
-	Location nu = findDuv(point, objectsVect[objNumber].normal); // normal unit vector
+	Location nu; // normal unit vector
+	nu.x = objectsVect[objNumber].normal.x / magnitude(objectsVect[objNumber].normal);
+	nu.y = objectsVect[objNumber].normal.y / magnitude(objectsVect[objNumber].normal);
+	nu.z = objectsVect[objNumber].normal.z / magnitude(objectsVect[objNumber].normal);
 	double D = findDotProduct(rayDu, nu);
-	Location focalToCenter = findL(objectsVect[objNumber].center, findFocalPoint());
-	double distFocalToPlaneNormal = findDotProduct(focalToCenter, nu);
-	double iterationsToPlane = distFocalToPlaneNormal / D; // t in diagram
 	Location planeIntersect;
-	planeIntersect.x = findFocalPoint().x + iterationsToPlane * rayDu.x;
-	planeIntersect.y = findFocalPoint().y + iterationsToPlane * rayDu.y;
-	planeIntersect.z = findFocalPoint().z + iterationsToPlane * rayDu.z;
-	if (iterationsToPlane < 0) {
-		planeIntersect.bad = true;
+	if (D > 0)
+	{
+		Location focalToCenter = findL(objectsVect[objNumber].center, findFocalPoint());
+		double distFocalToPlaneNormal = findDotProduct(focalToCenter, nu);
+		double iterationsToPlane = distFocalToPlaneNormal / D; // t in diagram
+		planeIntersect.x = findFocalPoint().x + iterationsToPlane * rayDu.x;
+		planeIntersect.y = findFocalPoint().y + iterationsToPlane * rayDu.y;
+		planeIntersect.z = findFocalPoint().z + iterationsToPlane * rayDu.z;
+
+		if (iterationsToPlane < 0) {
+			planeIntersect.bad = true;
+		}
+		else if (iterationsToPlane > 0) {
+			planeIntersect.bad = false;
+		}
 	}
+	else planeIntersect.bad = true;
 
 	return planeIntersect;
 }
