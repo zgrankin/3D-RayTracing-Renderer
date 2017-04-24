@@ -32,6 +32,7 @@ void Render::createImage(string filename)
 		{
 			image.setPixelColor(i, j, QColor(255, 0, 0, 255));
 		}*/
+	autoexposure(); // execute this to scale down the colors before creating image
 	int pos = 0;
 	for (unsigned int j = 0; j < image.height(); j++)
 		for (unsigned int i = 0; i < image.width(); i++)
@@ -43,6 +44,14 @@ void Render::createImage(string filename)
 	QFile outputFile(QString::fromStdString(filename));
 	outputFile.open(QIODevice::WriteOnly);
 	image.save(&outputFile, "PNG");
+}
+
+void Render::multiplyColorByScale(Color &theColor, double scale)
+{
+	Location vect;
+	theColor.r *= scale;
+	theColor.g *= scale;
+	theColor.b *= scale;
 }
 
 Location Render::findFocalPoint()
@@ -79,13 +88,8 @@ Location Render::findL(Location centerObject, Location focalPoint)
 Location Render::findDuv(Location point, Location focalPoint)
 {
 	Location Duv;
-
-	Duv.x = point.x - focalPoint.x;
-	Duv.y = point.y - focalPoint.y;
-	Duv.z = point.z - focalPoint.z;
-
+	Duv = findL(point, focalPoint);
 	double mag = magnitude(Duv);
-
 	Duv.x = Duv.x / mag;
 	Duv.y = Duv.y / mag;
 	Duv.z = Duv.z / mag;
@@ -114,9 +118,14 @@ Location Render::findW(Location focalPoint, Location Duv, double tca)
 	return w;
 }
 
-double Render::findD(Location w, Location centerObject)
+double Render::findMagnitudeFirstMinusSecond(Location w, Location centerObject)
 {
 	return sqrt(pow((w.x - centerObject.x), 2) + pow((w.y - centerObject.y), 2) + pow((w.z - centerObject.z), 2));
+}
+
+double Render::findDotProduct(Location first, Location second)
+{
+	return first.x * second.x + first.y * second.y + first.z * second.z;
 }
 
 double Render::findThc(double radius, double d)
@@ -137,18 +146,26 @@ Location Render::findClosestIntersect(Location focalPoint, Location Duv, double 
 {
 	Location intersect1, intersect2, closestIntersect;
 	double magnitude1, magnitude2;
+
 	intersect1.x = focalPoint.x + (Duv.x * (tca - thc));
 	intersect1.y = focalPoint.y + (Duv.y * (tca - thc));
 	intersect1.z = focalPoint.z + (Duv.z * (tca - thc));
+	magnitude1 = magnitude(intersect1);
 
 	intersect2.x = focalPoint.x + (Duv.x * (tca + thc));
 	intersect2.y = focalPoint.y + (Duv.y * (tca + thc));
 	intersect2.z = focalPoint.z + (Duv.z * (tca + thc));
-
-	magnitude1 = magnitude(intersect1);
 	magnitude2 = magnitude(intersect2);
 
-	if (magnitude1 < magnitude2)
+	if ((tca - thc) > 0 && (tca + thc) < 0)
+		closestIntersect = intersect1;
+	else if ((tca - thc) < 0 && (tca + thc) > 0)
+		closestIntersect = intersect2;
+	else if ((tca - thc) < 0 && (tca + thc) < 0) {
+		closestIntersect = intersect1;
+		closestIntersect.bad = true;
+	}
+	else if (magnitude1 < magnitude2)
 		closestIntersect = intersect1;
 	else if (magnitude2 < magnitude1)
 		closestIntersect = intersect2;
@@ -161,49 +178,64 @@ Location Render::findClosestIntersect(Location focalPoint, Location Duv, double 
 bool Render::calculateIntersect(Location point)
 {
 	vector<PointNColor> ip;
-	for (unsigned int objNumber = 0; objNumber < objectsVect.size(); objNumber++) 
-	{
-		Location F = findFocalPoint();
-		Location L = findL(objectsVect[objNumber].center, F);
-		Location duv = findDuv(point, F);
-		double tca = findTca(L, duv);
-		Location w = findW(F, duv, tca);
-		double d = findD(w, objectsVect[objNumber].center);
-		double thc = findThc(objectsVect[objNumber].radius, d);
-
-		if (thc != -1)
-		{
-			PointNColor intersect;
-			intersect.point = findClosestIntersect(F, duv, tca, thc);
-			intersect.color = objectsVect[objNumber].color;
-			ip.push_back(intersect);
+	PointNColor intersect;
+	vector<double> objLambertVect, objNumbVect;
+	for (unsigned int objNumber = 0; objNumber < objectsVect.size(); objNumber++) {
+		if (objectsVect[objNumber].type == "sphere") {
+			Location F = findFocalPoint();
+			Location L = findL(objectsVect[objNumber].center, F);
+			Location duv = findDuv(point, F);
+			double tca = findTca(L, duv);
+			Location w = findW(F, duv, tca);
+			double d = findMagnitudeFirstMinusSecond(w, objectsVect[objNumber].center);
+			double thc = findThc(objectsVect[objNumber].radius, d);
+			if (thc != -1) {
+				intersect.point = findClosestIntersect(F, duv, tca, thc);
+				if (intersect.point.bad == false) {
+					intersect.color = objectsVect[objNumber].color;
+					ip.push_back(intersect);
+					objLambertVect.push_back(objectsVect[objNumber].lambert);
+					objNumbVect.push_back(objNumber);
+				}
+			}
+		}
+		else if (objectsVect[objNumber].type == "plane") {
+			intersect.point = findIntersectPlane(objectsVect[objNumber].center, objNumber, point);
+			if (intersect.bad == false) {
+				intersect.color = objectsVect[objNumber].color;
+				ip.push_back(intersect);
+				objLambertVect.push_back(objectsVect[objNumber].lambert);
+				objNumbVect.push_back(objNumber);
+			}
 		}
 	}
+	if (determineClosestObject(ip, objLambertVect, objNumbVect)) return true; // will modify private variable value to set current intersectionP we will be looking at
+	else return false;
+}
 
+bool Render::determineClosestObject(vector<PointNColor> ip, vector<double> objLambertVect, vector<double> objNumbVect)
+{
 	if (ip.empty()) {
 		return false;
 	}
-	else
-	{
+	else {
 		int minMagIndex;
-		if (ip.size() > 1)
-		{
+		if (ip.size() > 1) {
 			int a;
 			a = 1;
 		}
-
 		double maggy;
 		maggy = magnitude(findL(ip[0].point, findFocalPoint()));
 		minMagIndex = 0;
 		for (unsigned int i = 1; i < ip.size(); i++)
 		{
-			
-			if (magnitude(findL(ip[i].point, findFocalPoint())) <= maggy)
-			{
+			if (magnitude(findL(ip[i].point, findFocalPoint())) <= maggy) {
 				minMagIndex = i;
 			}
 		}
 		intersectionP = ip[minMagIndex];
+		currentObjectLambert = objLambertVect[minMagIndex];
+		currentObjectNumber = objNumbVect[minMagIndex];
 		return true;
 	}
 }
@@ -229,7 +261,11 @@ void Render::findAllIntersect()
 		{
 			pixel.point.x = i;
 			pixel.point.y = j;
-			pixel.color = intersectionP.color;
+			
+			if (objectsVect[currentObjectNumber].type == "sphere")
+				pixel.color = findLightContributionSphere(intersectionP.point, objectsVect[currentObjectNumber].center, lightsVect);
+			else if (objectsVect[currentObjectNumber].type == "plane")
+				pixel.color = findLightContributionPlane(intersectionP.point, objectsVect[currentObjectNumber].center, lightsVect, objectsVect[currentObjectNumber].normal);
 			pixels.push_back(pixel);
 		}
 		else
@@ -242,3 +278,103 @@ void Render::findAllIntersect()
 	}
 }
 
+Color Render::findLightContributionSphere(Location crossPoint, Location centerSphere, vector<Lights> lightSources)
+{
+	Location nu, lu;
+	double lightScaleFactor;
+	Color color;
+	double lambert = currentObjectLambert;
+	vector<Color> colorSummation;
+	nu = findDuv(crossPoint, centerSphere); // normal to sphere unit vector
+	for (int i = 0; i < lightSources.size(); i++)
+	{
+		color = intersectionP.color;
+		lu = findDuv(lightSources[i].theLocation, crossPoint); // normal to light unit vector
+		lightScaleFactor = findDotProduct(nu, lu) * lightSources[i].intensity * lambert;
+		if (lightScaleFactor < 0) {
+			lightScaleFactor = 0;
+		}
+		multiplyColorByScale(color, lightScaleFactor); // modify the color by reference
+		colorSummation.push_back(color); // push scaled color into vector to be used later for summation
+	}
+
+	color = black;
+	for (int i = 0; i < colorSummation.size(); i++)
+	{
+		color.r += colorSummation[i].r;
+		color.g += colorSummation[i].g;
+		color.b += colorSummation[i].b;
+	}
+
+	return color;
+}
+
+Color Render::findLightContributionPlane(Location crossPoint, Location centerPlane, vector<Lights> lightSources, Location nu)
+{
+	Location lu;
+	double lightScaleFactor;
+	Color color;
+	double lambert = currentObjectLambert;
+	vector<Color> colorSummation;
+	for (int i = 0; i < lightSources.size(); i++)
+	{
+		color = intersectionP.color;
+		lu = findDuv(lightSources[i].theLocation, crossPoint); // normal to light unit vector
+		lightScaleFactor = findDotProduct(nu, lu) * lightSources[i].intensity * lambert;
+		if (lightScaleFactor < 0) {
+			lightScaleFactor = 0;
+		}
+		multiplyColorByScale(color, lightScaleFactor); // modify the color by reference
+		colorSummation.push_back(color); // push scaled color into vector to be used later for summation
+	}
+
+	color = black;
+	for (int i = 0; i < colorSummation.size(); i++)
+	{
+		color.r += colorSummation[i].r;
+		color.g += colorSummation[i].g;
+		color.b += colorSummation[i].b;
+	}
+
+	return color;
+}
+
+Location Render::findIntersectPlane(Location centerPlane, double objNumber, Location point)
+{
+	Location rayDu = findDuv(point, findFocalPoint()); // equivalent to Ru in diagram
+	Location nu = findDuv(point, objectsVect[objNumber].normal); // normal unit vector
+	double D = findDotProduct(rayDu, nu);
+	Location focalToCenter = findL(objectsVect[objNumber].center, findFocalPoint());
+	double distFocalToPlaneNormal = findDotProduct(focalToCenter, nu);
+	double iterationsToPlane = distFocalToPlaneNormal / D; // t in diagram
+	Location planeIntersect;
+	planeIntersect.x = findFocalPoint().x + iterationsToPlane * rayDu.x;
+	planeIntersect.y = findFocalPoint().y + iterationsToPlane * rayDu.y;
+	planeIntersect.z = findFocalPoint().z + iterationsToPlane * rayDu.z;
+	if (iterationsToPlane < 0) {
+		planeIntersect.bad = true;
+	}
+
+	return planeIntersect;
+}
+
+void Render::autoexposure()
+{
+	const double maxColor = 255;
+	double highestColor = 255;
+	for (unsigned int i = 0; i < image.width() * image.height(); i++)
+	{
+		highestColor = (pixels[i].color.r > highestColor) ? pixels[i].color.r :
+					   (pixels[i].color.g > highestColor) ? pixels[i].color.g :
+					   (pixels[i].color.b > highestColor) ? pixels[i].color.b :
+						highestColor;
+	}
+
+	double scale = maxColor / highestColor;
+	for (unsigned int i = 0; i < image.width() * image.height(); i++)
+	{
+		pixels[i].color.r *= scale;
+		pixels[i].color.g *= scale;
+		pixels[i].color.b *= scale;
+	}
+}

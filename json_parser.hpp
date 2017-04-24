@@ -13,6 +13,7 @@ struct Location {
 	double x;
 	double y;
 	double z;
+	bool bad = false;
 };
 
 struct Color {
