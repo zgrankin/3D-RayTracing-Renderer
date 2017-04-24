@@ -12,8 +12,8 @@ int main(int argc, char *argv[])
 	//a.readFile("scene1.json");
 	//a.pullAllInfo();
 	//a.printAllInfo();
-	Render b("scene0.json");
-	b.calculateIntersect();
+	Render b("scene2.json");
+	b.findAllIntersect();
 	b.createImage("output.png");
 	
 	return 0;

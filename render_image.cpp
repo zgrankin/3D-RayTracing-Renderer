@@ -12,6 +12,10 @@ Render::Render(string filename)
 	camera = json.returnCamera();
 	lightsVect = json.returnLightsVect();
 	objectsVect = json.returnObjectsVect();
+
+	black.r = 0;
+	black.g = 0;
+	black.b = 0;
 }
 
 Render::~Render()
@@ -22,15 +26,18 @@ Render::~Render()
 void Render::createImage(string filename)
 {
 	image = QImage(camera.size.first, camera.size.second, QImage::Format_ARGB32);
-	/*for (unsigned int i = 0; i < image.width() * image.height(); i++)
-	{
-		image.setPixelColor(i % image.width(), i / image.width(), QColor(255, 0, 0, 255));
-	}*/
 
-	for (unsigned int i = 0; i < image.width(); i++)
-		for (unsigned int j = 0; j < image.height(); j++)
+	/*for (unsigned int j = 0; j < image.height(); j++)
+		for (unsigned int i = 0; i < image.width(); i++)
 		{
 			image.setPixelColor(i, j, QColor(255, 0, 0, 255));
+		}*/
+	int pos = 0;
+	for (unsigned int j = 0; j < image.height(); j++)
+		for (unsigned int i = 0; i < image.width(); i++)
+		{
+			image.setPixelColor(i, j, QColor(pixels[pos].color.r, pixels[pos].color.g, pixels[pos].color.b, 255));
+			pos++;
 		}
 
 	QFile outputFile(QString::fromStdString(filename));
@@ -77,7 +84,7 @@ Location Render::findDuv(Location point, Location focalPoint)
 	Duv.y = point.y - focalPoint.y;
 	Duv.z = point.z - focalPoint.z;
 
-	double mag = magnitudeD(Duv);
+	double mag = magnitude(Duv);
 
 	Duv.x = Duv.x / mag;
 	Duv.y = Duv.y / mag;
@@ -86,9 +93,9 @@ Location Render::findDuv(Location point, Location focalPoint)
 	return Duv;
 }
 
-double Render::magnitudeD(Location Duv)
+double Render::magnitude(Location theVector)
 {
-	return sqrt(pow(Duv.x, 2) + pow(Duv.y, 2) + pow(Duv.z, 2));
+	return sqrt(pow(theVector.x, 2) + pow(theVector.y, 2) + pow(theVector.z, 2));
 }
 
 double Render::findTca(Location L, Location Duv)
@@ -138,33 +145,100 @@ Location Render::findClosestIntersect(Location focalPoint, Location Duv, double 
 	intersect2.y = focalPoint.y + (Duv.y * (tca + thc));
 	intersect2.z = focalPoint.z + (Duv.z * (tca + thc));
 
-	magnitude1 = sqrt(pow((intersect1.x - focalPoint.x), 2) + pow((intersect1.y - focalPoint.y), 2) + pow((intersect1.z - focalPoint.z), 2));
-	magnitude2 = sqrt(pow((intersect2.x - focalPoint.x), 2) + pow((intersect2.y - focalPoint.y), 2) + pow((intersect2.z - focalPoint.z), 2));
+	magnitude1 = magnitude(intersect1);
+	magnitude2 = magnitude(intersect2);
 
 	if (magnitude1 < magnitude2)
 		closestIntersect = intersect1;
 	else if (magnitude2 < magnitude1)
 		closestIntersect = intersect2;
+	else
+		closestIntersect = intersect1;
 
 	return closestIntersect;
 }
 
-bool Render::calculateIntersect()
+bool Render::calculateIntersect(Location point)
 {
-	// point I want to send the direction ray through on the camera
-	Location point; point.x = 0; point.y = 0; point.z = 0;
+	vector<PointNColor> ip;
+	for (unsigned int objNumber = 0; objNumber < objectsVect.size(); objNumber++) 
+	{
+		Location F = findFocalPoint();
+		Location L = findL(objectsVect[objNumber].center, F);
+		Location duv = findDuv(point, F);
+		double tca = findTca(L, duv);
+		Location w = findW(F, duv, tca);
+		double d = findD(w, objectsVect[objNumber].center);
+		double thc = findThc(objectsVect[objNumber].radius, d);
 
-	Location F = findFocalPoint();
-	Location L = findL(objectsVect[0].center, F);
-	Location duv = findDuv(point, F);
-	double tca = findTca(L, duv);
-	Location w = findW(F, duv, tca);
-	double d = findD(w, objectsVect[0].center);
-	double thc = findThc(objectsVect[0].radius, d);
-	if (thc == -1)
+		if (thc != -1)
+		{
+			PointNColor intersect;
+			intersect.point = findClosestIntersect(F, duv, tca, thc);
+			intersect.color = objectsVect[objNumber].color;
+			ip.push_back(intersect);
+		}
+	}
+
+	if (ip.empty()) {
 		return false;
-	else {
-		intersectPoints.push_back( findClosestIntersect(F, duv, tca, thc) );
+	}
+	else
+	{
+		int minMagIndex;
+		if (ip.size() > 1)
+		{
+			int a;
+			a = 1;
+		}
+
+		double maggy;
+		maggy = magnitude(findL(ip[0].point, findFocalPoint()));
+		minMagIndex = 0;
+		for (unsigned int i = 1; i < ip.size(); i++)
+		{
+			
+			if (magnitude(findL(ip[i].point, findFocalPoint())) <= maggy)
+			{
+				minMagIndex = i;
+			}
+		}
+		intersectionP = ip[minMagIndex];
 		return true;
 	}
 }
+
+void Render::findAllIntersect()
+{
+	Location point;
+	PointNColor pixel;
+	double startx, endx;
+	double starty, endy;
+	startx = -1 * (camera.size.first) / 2;
+	endx = (camera.size.first) / 2;
+	starty = -1 * (camera.size.second) / 2;
+	endy = (camera.size.second) / 2;
+
+	for (double j = starty; j < endy; j++)
+		for (double i = startx; i < endx; i++)
+	{
+		point.x = i * camera.resolution.first;
+		point.y = j * camera.resolution.second;
+		point.z = camera.center.z; // need to fix to handle facing different directions
+		if (calculateIntersect(point))
+		{
+			pixel.point.x = i;
+			pixel.point.y = j;
+			pixel.color = intersectionP.color;
+			pixels.push_back(pixel);
+		}
+		else
+		{
+			pixel.point.x = i;
+			pixel.point.y = j;
+			pixel.color = black;
+			pixels.push_back(pixel);
+		}
+	}
+}
+
