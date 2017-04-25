@@ -13,6 +13,9 @@ Render::Render()
 	white.r = 255;
 	white.g = 255;
 	white.b = 255;
+	upuv.x = 0;
+	upuv.y = -1;
+	upuv.z = 0;
 }
 
 Render::Render(string filename, bool isFile)
@@ -27,6 +30,7 @@ Render::Render(string filename, bool isFile)
 		camera = json.returnCamera(); lightsVect = json.returnLightsVect(); objectsVect = json.returnObjectsVect();
 	}
 	black.r = 0;  black.g = 0; black.b = 0; white.r = 255; white.g = 255; white.b = 255;
+	upuv.x = 0; upuv.y = -1; upuv.z = 0;
 }
 
 Render::~Render()
@@ -54,28 +58,30 @@ void Render::createImage(string filename)
 
 void Render::multiplyColorByScale(Color &theColor, double scale)
 {
-	Location vect;
 	theColor.r *= scale;
 	theColor.g *= scale;
 	theColor.b *= scale;
 }
 
+Location Render::multiplyVectorByScale(Location loc, double scale)
+{
+	loc.x *= scale;
+	loc.y *= scale;
+	loc.z *= scale;
+	return loc;
+}
+
 Location Render::findFocalPoint()
 {
 	Location focalPoint;
-	// focal point is private variable being modified
-	if (camera.normal.x != 0) {
-		focalPoint = camera.center;
-		focalPoint.x = camera.center.x - camera.focus;
-	}
-	else if (camera.normal.y != 0) {
-		focalPoint = camera.center;
-		focalPoint.y = camera.center.y - camera.focus;
-	}
-	else if (camera.normal.z != 0) {
-		focalPoint = camera.center;
-		focalPoint.z = camera.center.z - camera.focus;
-	}
+	Location none;
+	none.x = 0; none.y = 0; none.z = 0;
+	camera.normal = findDuv(camera.normal, none);
+	multiplyVectorByScale(camera.normal, camera.focus);
+	
+	focalPoint = findL(camera.center, multiplyVectorByScale(camera.normal, camera.focus));
+
+
 	return focalPoint;
 }
 
@@ -445,6 +451,28 @@ void Render::autoexposure()
 		pixels[i].color.g *= scale;
 		pixels[i].color.b *= scale;
 	}
+}
+
+Location Render::computeCrossProduct(Location a, Location b)
+{
+	Location result;
+	result.x = a.y * b.z - b.y * a.z;
+	result.y = b.x * a.z - a.x * b.z;
+	result.z = a.x * b.y - b.x * a.y;
+}
+
+Location Render::panRuv(Location cuv, Location upuv)
+{
+	Location z; z.x = 0; z.y = 0; z.z = 0;
+	Location result = computeCrossProduct(cuv, upuv);
+	findDuv(result, z);
+}
+
+Location Render::panUuv(Location panRuv, Location cuv)
+{
+	Location z; z.x = 0; z.y = 0; z.z = 0;
+	Location result = computeCrossProduct(panRuv, cuv);
+	findDuv(result, z);
 }
 
 void Render::setCameraValues(Camera cam)

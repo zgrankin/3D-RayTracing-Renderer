@@ -44,7 +44,12 @@ public:
 	bool shadowIntersect(Location F, Location lu, double lightMag, unsigned int objIndex);
 
 	void multiplyColorByScale(Color &theColor, double scale);
+	Location multiplyVectorByScale(Location loc, double scale);
 	void autoexposure();
+
+	Location computeCrossProduct(Location a, Location b);
+	Location panRuv(Location cuv, Location upuv);
+	Location panUuv(Location panRuv, Location cuv);
 
 
 	// Test functions
@@ -68,6 +73,8 @@ private:
 	double currentObjectNumber;
 
 	Location objectFocalForShadow;
+
+	Location upuv;
 };
 
 #endif
