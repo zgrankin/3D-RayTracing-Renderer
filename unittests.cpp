@@ -1,35 +1,207 @@
 #define CATCH_CONFIG_MAIN
 #define CATCH_CONFIG_COLOUR_NONE
 #include "catch.hpp"
+#include "render_image.hpp"
 
-// IMPORTANT NOTE:
-// These are just a few examples from my solution and **should be removed**.
-// Depending on your code design your class and functions names would differ
+Location setLocation(Location &a, double b, double c, double d) {
+	a.x = b; a.y = c; a.z = d;
+	return a;
+}
 
-#include "geometry.hpp"
+Color setColor(Color &a, double b, double c, double d) {
+	a.r = b; a.g = c; a.b = d;
+	return a;
+}
 
-TEST_CASE( "Test Basic Geometry: Vec3d ", "[geometry]" ) {
+TEST_CASE( "Test findFocalPoint Z", "[geometry]" ) {
+	Render b;
+	Camera c;
+	Lights l;
+	Objects o;
+	setLocation(c.center, 0, 0, 0);
+	c.focus = 10;
+	setLocation(c.normal, 0, 0, 1);
 
-  Vec3d a(2,0,0), b(0,4,0);
-  
-  REQUIRE(a.x == Approx(2));
-  REQUIRE(a.y == Approx(0));
-  REQUIRE(a.z == Approx(0));
+	b.setCameraValues(c);
+	
+	Location a;
+	REQUIRE(b.findFocalPoint().x == setLocation(a, 0, 0, -10).x);
+	REQUIRE(b.findFocalPoint().y == setLocation(a, 0, 0, -10).y);
+	REQUIRE(b.findFocalPoint().z == setLocation(a, 0, 0, -10).z);
+}
 
-  REQUIRE(b.x == Approx(0));
-  REQUIRE(b.y == Approx(4));
-  REQUIRE(b.z == Approx(0));
+TEST_CASE("Test findFocalPoint Y", "[geometry]") {
+	Render b;
+	Camera c;
+	Lights l;
+	Objects o;
+	setLocation(c.center, 0, 0, 0);
+	c.focus = 10;
+	setLocation(c.normal, 0, 1, 0);
 
-  double adotb = dot(a,b);
-  REQUIRE(adotb == Approx(0));
+	b.setCameraValues(c);
+	Location a;
+	REQUIRE(b.findFocalPoint().x == setLocation(a, 0, -10, 0).x);
+	REQUIRE(b.findFocalPoint().y == setLocation(a, 0, -10, 0).y);
+	REQUIRE(b.findFocalPoint().z == setLocation(a, 0, -10, 0).z);
+}
 
-  Vec3d anorm = norm(a);
-  REQUIRE(anorm.x == Approx(1));
-  REQUIRE(anorm.y == Approx(0));
-  REQUIRE(anorm.z == Approx(0));
+TEST_CASE("Test findFocalPoint X", "[geometry]") {
+	Render b;
+	Camera c;
+	Lights l;
+	Objects o;
+	setLocation(c.center, 0, 0, 0);
+	c.focus = 10;
+	setLocation(c.normal, 1, 0, 0);
 
-  Vec3d bnorm = norm(b);
-  REQUIRE(bnorm.x == Approx(0));
-  REQUIRE(bnorm.y == Approx(1));
-  REQUIRE(bnorm.z == Approx(0));
+	b.setCameraValues(c);
+	Location a;
+	REQUIRE(b.findFocalPoint().x == setLocation(a, -10, 0, 0).x);
+	REQUIRE(b.findFocalPoint().y == setLocation(a, -10, 0, 0).y);
+	REQUIRE(b.findFocalPoint().z == setLocation(a, -10, 0, 0).z);
+}
+
+TEST_CASE("Test find vector", "[geometry]") {
+	Render a;
+	Location b = setLocation(b, 10, 10, 10);
+	Location c = setLocation(c, 8, 6, 4);
+	REQUIRE(a.findL(b, c).x == 2);
+	REQUIRE(a.findL(b, c).y == 4);
+	REQUIRE(a.findL(b, c).z == 6);
+}
+
+TEST_CASE("Test find Duv", "[geometry]") {
+	Render a;
+	Location b = setLocation(b, 0, 0, 10);
+	Location c = setLocation(c, 0, 0, 5);
+	REQUIRE(a.findDuv(b, c).x == 0);
+	REQUIRE(a.findDuv(b, c).y == 0);
+	REQUIRE(a.findDuv(b, c).z == 1);
+}
+
+TEST_CASE("Test find magnitude", "[geometry]") {
+	Render a;
+	Location b = setLocation(b, 0, 0, 10);
+	REQUIRE(a.magnitude(b) == 10);
+}
+
+TEST_CASE("Test find w", "[geometry]") {
+	Render a;
+	Location b = setLocation(b, 0, 0, 10);
+	Location c = setLocation(c, 0, 0, 5);
+	REQUIRE(a.findW(b, c, 1).x == 0);
+	REQUIRE(a.findW(b, c, 1).y == 0);
+	REQUIRE(a.findW(b, c, 1).z == 15);
+}
+
+TEST_CASE("Test find magnitude, first minus second", "[geometry]") {
+	Render a;
+	Location b = setLocation(b, 0, 0, 10);
+	Location c = setLocation(c, 0, 0, 5);
+	REQUIRE(a.findMagnitudeFirstMinusSecond(b, c) == 5);
+}
+
+TEST_CASE("Test find dot product", "[geometry]") {
+	Render a;
+	Location b = setLocation(b, 0, 0, 10);
+	Location c = setLocation(c, 0, 0, 5);
+	REQUIRE(a.findDotProduct(b, c) == 50);
+}
+
+TEST_CASE("Test findThc", "[geometry]") {
+	Render a;
+	REQUIRE(a.findThc(10, 10) == 0);
+	REQUIRE(a.findThc(10, 15) == -1);
+}
+
+TEST_CASE("Test find closest intersect", "[geometry]") {
+	Render a;
+	Location fp, duv;
+	setLocation(fp, 0, 0, -10);
+	setLocation(duv, 0, 1, 0);
+	Location l = a.findClosestIntersect(fp, duv, 5, -10);
+	REQUIRE(floor(l.x) == 0);
+	REQUIRE(floor(l.y) == 15);
+	REQUIRE(floor(l.z) == -10);
+	l = a.findClosestIntersect(fp, duv, -5, 10);
+	REQUIRE(floor(l.x) == 0);
+	REQUIRE(floor(l.y) == 5);
+	REQUIRE(floor(l.z) == -10);
+	l = a.findClosestIntersect(fp, duv, -9, -3);
+	REQUIRE(floor(l.x) == 0);
+	REQUIRE(floor(l.y) == -6);
+	REQUIRE(floor(l.z) == -10);
+}
+
+TEST_CASE("Test Case 1", "[geometry]") {
+	Render b;
+	Camera c;
+	Lights l;
+	Objects o;
+	setLocation(c.center, 0, 0, 0);
+	c.focus = 10;
+	setLocation(c.normal, 0, 1, 0);
+	c.resolution.first = .01;
+	c.resolution.second = .01;
+	c.size.first = 256;
+	c.size.second = 256;
+	l.intensity = 1;
+	setLocation(l.theLocation, 5, -5, 0);
+	setLocation(o.center, 0, 0, 5);
+	setColor(o.color, 255, 0, 0);
+	o.lambert = 1;
+	o.radius = 1;
+	o.type = "sphere";
+
+	//b.setCameraValues(c);
+	//b.setLightsValues(l);
+	//b.setObjectsValues(o);
+
+	//b.findAllIntersect();
+	/*REQUIRE(b.findAllIntersect() == setLocation(a, 0, -10, 0).x);
+	REQUIRE(b.findFocalPoint().y == setLocation(a, 0, -10, 0).y);
+	REQUIRE(b.findFocalPoint().z == setLocation(a, 0, -10, 0).z);*/
+}
+
+TEST_CASE("Test scene0.json", "[geometry]") {
+	string jsonstuff = "{ \"camera\": {        \"center\": {            \"x\": 0,            \"y\": 0,            \"z\": 0        },        \"focus\": 10,        \"normal\": {            \"x\": 0,            \"y\": 0,            \"z\": 1        },        \"resolution\": [            0.01,            0.01        ],        \"size\": [            256,            256        ]    },    \"lights\": [        {            \"intensity\": 1,            \"location\": {                \"x\": 5,                \"y\": -5,                \"z\": 0            }        }    ],    \"objects\": [        {            \"center\": {                \"x\": 0,                \"y\": 0,                \"z\": 5            },            \"color\": {                \"b\": 0,                \"g\": 0,                \"r\": 255            },            \"lambert\": 1,            \"radius\": 1,            \"type\": \"sphere\"        }    ]}";
+	Render a(jsonstuff, false);
+	a.findAllIntersect();
+	a.autoexposure();
+}
+
+
+TEST_CASE("Test scene1.json", "[geometry]") {
+	string jsonstuff = "{ \"camera\": {        \"center\": {            \"x\": 0,            \"y\": 0,            \"z\": 0        },        \"focus\": 10,        \"normal\": {            \"x\": 0,            \"y\": 0,            \"z\": 1        },        \"resolution\": [            0.01,            0.01        ],        \"size\": [            1024,            1024        ]    },    \"lights\": [        {            \"intensity\": 1,            \"location\": {                \"x\": 5,                \"y\": -5,                \"z\": 0            }        }    ],    \"objects\": [        {            \"center\": {                \"x\": 0,                \"y\": 0,                \"z\": 5            },            \"color\": {                \"b\": 0,                \"g\": 0,                \"r\": 255            },            \"lambert\": 1,            \"radius\": 1,            \"type\": \"sphere\"        },        {            \"center\": {                \"x\": 0,                \"y\": 5,                \"z\": 0            },            \"color\": {                \"b\": 255,                \"g\": 255,                \"r\": 255            },            \"lambert\": 1,            \"normal\": {                \"x\": 0,                \"y\": -1,                \"z\": 0            },            \"type\": \"plane\"        }    ]}";
+	Render a(jsonstuff, false);
+	a.findAllIntersect();
+	a.autoexposure();
+	a.createImage("");
+
+	JSONParser b; 
+	b.JSONDocFromString(jsonstuff);
+	b.pullAllInfo();
+	b.printAllInfo();
+}
+
+TEST_CASE("Test scene2.json", "[geometry]") {
+	/*string jsonstuff = "{    \"camera\": {        \"center\": {            \"x\": 0,            \"y\": 0,            \"z\": 0        },        \"focus\": 10,        \"normal\": {            \"x\": 0,            \"y\": 0,            \"z\": 1        },        \"resolution\": [            0.02,            0.02        ],        \"size\": [            512,            512        ]    },    \"lights\": [        {            \"intensity\": 0.6,            \"location\": {                \"x\": 0,                \"y\": 0,                \"z\": -10            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 100,                \"y\": 0,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 99.50041652780257,                \"y\": 9.983341664682815,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 98.00665778412416,                \"y\": 19.866933079506122,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 95.5336489125606,                \"y\": 29.55202066613396,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 92.10609940028851,                \"y\": 38.941834230865055,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 87.75825618903727,                \"y\": 47.942553860420304,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 82.53356149096783,                \"y\": 56.46424733950354,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 76.48421872844885,                \"y\": 64.4217687237691,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 69.67067093471655,                \"y\": 71.73560908995226,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 62.16099682706646,                \"y\": 78.33269096274833,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 54.030230586813985,                \"y\": 84.14709848078964,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 45.35961214255775,                \"y\": 89.12073600614353,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 36.235775447667365,                \"y\": 93.20390859672263,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 26.749882862458733,                \"y\": 96.3558185417193,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 16.99671429002408,                \"y\": 98.54497299884602,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 7.0737201667702685,                \"y\": 99.74949866040545,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -2.919952230128904,                \"y\": 99.95736030415051,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -12.884449429552507,                \"y\": 99.16648104524685,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -22.720209469308752,                \"y\": 97.38476308781951,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -32.328956686350395,                \"y\": 94.63000876874143,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -41.61468365471428,                \"y\": 90.92974268256815,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -50.48461045998579,                \"y\": 86.32093666488736,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -58.85011172553462,                \"y\": 80.84964038195899,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -66.62760212798247,                \"y\": 74.57052121767198,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -73.7393715541246,                \"y\": 67.54631805511504,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -80.11436155469343,                \"y\": 59.84721441039558,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -85.68887533689478,                \"y\": 51.55013718214634,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -90.40721420170617,                \"y\": 42.7379880233829,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -94.22223406686585,                \"y\": 33.49881501559038,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -97.09581651495908,                \"y\": 23.924932921398113,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -98.99924966004457,                \"y\": 14.112000805986588,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -99.91351502732795,                \"y\": 4.158066243328916,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -99.8294775794753,                \"y\": -5.837414342758141,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -98.74797699088647,                \"y\": -15.774569414324995,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -96.67981925794605,                \"y\": -25.554110202683294,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -93.64566872907957,                \"y\": -35.07832276896215,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -89.67584163341462,                \"y\": -44.25204432948541,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -84.81000317104072,                \"y\": -52.983614090849485,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -79.09677119144153,                \"y\": -61.18578909427207,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -72.59323042001387,                \"y\": -68.77661591839754,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -65.36436208636106,                \"y\": -75.68024953079295,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -57.48239465332677,                \"y\": -81.82771110644114,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -49.02608213406987,                \"y\": -87.15757724135887,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -40.07991720799746,                \"y\": -91.61659367494552,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -30.733286997841937,                \"y\": -95.16020738895162,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -21.079579943077974,                \"y\": -97.7530117665097,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -11.215252693505487,                \"y\": -99.36910036334645,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -1.238866346289145,                \"y\": -99.99232575641008,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 8.749898343944551,                \"y\": -99.61646088358408,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 18.6512369422574,                \"y\": -98.24526126243327,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 28.366218546322457,                \"y\": -95.8924274663139,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 37.79777427129786,                \"y\": -92.58146823277332,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 46.85166713003748,                \"y\": -88.34546557201544,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 55.43743361791586,                \"y\": -83.22674422239027,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 63.46928759426319,                \"y\": -77.27644875559893,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 70.86697742912575,                \"y\": -70.55403255703945,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 77.55658785102473,                \"y\": -63.12666378723243,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 83.47127848391574,                \"y\": -55.068554259764134,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 88.55195169413169,                \"y\": -46.46021794137613,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 92.74784307440339,                \"y\": -37.3876664830241,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 96.01702866503645,                \"y\": -27.941549819893098,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 98.32684384425836,                \"y\": -18.216250427210113,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 99.6542097023217,                \"y\": -8.30894028175026,                \"z\": -100            }        }    ],    \"objects\": [        {            \"center\": {                \"x\": 2,                \"y\": 0,                \"z\": 5            },            \"color\": {                \"b\": 100,                \"g\": 100,                \"r\": 200            },            \"lambert\": 1,            \"radius\": 2,            \"type\": \"sphere\"        },        {            \"center\": {                \"x\": -0.9999999999999996,                \"y\": 1.7320508075688776,                \"z\": 5            },            \"color\": {                \"b\": 100,                \"g\": 200,                \"r\": 100            },            \"lambert\": 1,            \"radius\": 2,            \"type\": \"sphere\"        },        {            \"center\": {                \"x\": -0.9999999999999996,                \"y\": -1.7320508075688776,                \"z\": 5            },            \"color\": {                \"b\": 200,                \"g\": 100,                \"r\": 100            },            \"lambert\": 1,            \"radius\": 2,            \"type\": \"sphere\"        },        {            \"center\": {                \"x\": 1,                \"y\": 1,                \"z\": 1            },            \"color\": {                \"b\": 200,                \"g\": 200,                \"r\": 200            },            \"lambert\": 1,            \"radius\": 0.5,            \"type\": \"sphere\"        },        {            \"center\": {                \"x\": 0,                \"y\": 0,                \"z\": 40            },            \"color\": {                \"b\": 100,                \"g\": 100,                \"r\": 100            },            \"lambert\": 1,            \"normal\": {                \"x\": 0,                \"y\": 0,                \"z\": -1            },            \"type\": \"plane\"        },        {            \"center\": {                \"x\": 0,                \"y\": -10,                \"z\": 0            },            \"color\": {                \"b\": 200,                \"g\": 0,                \"r\": 0            },            \"lambert\": 1,            \"normal\": {                \"x\": 0,                \"y\": 1,                \"z\": 0            },            \"type\": \"plane\"        },        {            \"center\": {                \"x\": 0,                \"y\": 10,                \"z\": 0            },            \"color\": {                \"b\": 0,                \"g\": 200,                \"r\": 0            },            \"lambert\": 1,            \"normal\": {                \"x\": 0,                \"y\": -1,                \"z\": 0            },            \"type\": \"plane\"        },        {            \"center\": {                \"x\": -10,                \"y\": 0,                \"z\": 0            },            \"color\": {                \"b\": 100,                \"g\": 100,                \"r\": 100            },            \"lambert\": 1,            \"normal\": {                \"x\": 1,                \"y\": 0,                \"z\": 0            },            \"type\": \"plane\"        },        {            \"center\": {                \"x\": 10,                \"y\": 0,                \"z\": 0            },            \"color\": {                \"b\": 100,                \"g\": 100,                \"r\": 100            },            \"lambert\": 1,            \"normal\": {                \"x\": -1,                \"y\": 0,                \"z\": 0            },            \"type\": \"plane\"        }    ]}";
+	Render a(jsonstuff, false);
+	a.findAllIntersect();
+	a.autoexposure();*/
+}
+
+TEST_CASE("Test scene3.json", "[geometry]") {
+	/*string jsonstuff = "{    \"camera\": {        \"center\": {            \"x\": 0,            \"y\": 0,            \"z\": 0        },        \"focus\": 10,        \"normal\": {            \"x\": 0,            \"y\": 0,            \"z\": 1        },        \"resolution\": [            0.01,            0.01        ],        \"size\": [            1024,            1024        ]    },    \"lights\": [        {            \"intensity\": 0.6,            \"location\": {                \"x\": 0,                \"y\": 0,                \"z\": -10            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 100,                \"y\": 0,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 99.50041652780257,                \"y\": 9.983341664682815,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 98.00665778412416,                \"y\": 19.866933079506122,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 95.5336489125606,                \"y\": 29.55202066613396,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 92.10609940028851,                \"y\": 38.941834230865055,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 87.75825618903727,                \"y\": 47.942553860420304,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 82.53356149096783,                \"y\": 56.46424733950354,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 76.48421872844885,                \"y\": 64.4217687237691,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 69.67067093471655,                \"y\": 71.73560908995226,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 62.16099682706646,                \"y\": 78.33269096274833,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 54.030230586813985,                \"y\": 84.14709848078964,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 45.35961214255775,                \"y\": 89.12073600614353,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 36.235775447667365,                \"y\": 93.20390859672263,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 26.749882862458733,                \"y\": 96.3558185417193,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 16.99671429002408,                \"y\": 98.54497299884602,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 7.0737201667702685,                \"y\": 99.74949866040545,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -2.919952230128904,                \"y\": 99.95736030415051,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -12.884449429552507,                \"y\": 99.16648104524685,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -22.720209469308752,                \"y\": 97.38476308781951,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -32.328956686350395,                \"y\": 94.63000876874143,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -41.61468365471428,                \"y\": 90.92974268256815,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -50.48461045998579,                \"y\": 86.32093666488736,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -58.85011172553462,                \"y\": 80.84964038195899,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -66.62760212798247,                \"y\": 74.57052121767198,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -73.7393715541246,                \"y\": 67.54631805511504,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -80.11436155469343,                \"y\": 59.84721441039558,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -85.68887533689478,                \"y\": 51.55013718214634,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -90.40721420170617,                \"y\": 42.7379880233829,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -94.22223406686585,                \"y\": 33.49881501559038,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -97.09581651495908,                \"y\": 23.924932921398113,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -98.99924966004457,                \"y\": 14.112000805986588,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -99.91351502732795,                \"y\": 4.158066243328916,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -99.8294775794753,                \"y\": -5.837414342758141,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -98.74797699088647,                \"y\": -15.774569414324995,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -96.67981925794605,                \"y\": -25.554110202683294,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -93.64566872907957,                \"y\": -35.07832276896215,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -89.67584163341462,                \"y\": -44.25204432948541,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -84.81000317104072,                \"y\": -52.983614090849485,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -79.09677119144153,                \"y\": -61.18578909427207,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -72.59323042001387,                \"y\": -68.77661591839754,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -65.36436208636106,                \"y\": -75.68024953079295,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -57.48239465332677,                \"y\": -81.82771110644114,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -49.02608213406987,                \"y\": -87.15757724135887,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -40.07991720799746,                \"y\": -91.61659367494552,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -30.733286997841937,                \"y\": -95.16020738895162,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -21.079579943077974,                \"y\": -97.7530117665097,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -11.215252693505487,                \"y\": -99.36910036334645,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": -1.238866346289145,                \"y\": -99.99232575641008,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 8.749898343944551,                \"y\": -99.61646088358408,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 18.6512369422574,                \"y\": -98.24526126243327,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 28.366218546322457,                \"y\": -95.8924274663139,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 37.79777427129786,                \"y\": -92.58146823277332,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 46.85166713003748,                \"y\": -88.34546557201544,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 55.43743361791586,                \"y\": -83.22674422239027,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 63.46928759426319,                \"y\": -77.27644875559893,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 70.86697742912575,                \"y\": -70.55403255703945,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 77.55658785102473,                \"y\": -63.12666378723243,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 83.47127848391574,                \"y\": -55.068554259764134,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 88.55195169413169,                \"y\": -46.46021794137613,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 92.74784307440339,                \"y\": -37.3876664830241,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 96.01702866503645,                \"y\": -27.941549819893098,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 98.32684384425836,                \"y\": -18.216250427210113,                \"z\": -100            }        },        {            \"intensity\": 0.5,            \"location\": {                \"x\": 99.6542097023217,                \"y\": -8.30894028175026,                \"z\": -100            }        }    ],    \"objects\": [        {            \"center\": {                \"x\": 2,                \"y\": 0,                \"z\": 5            },            \"color\": {                \"b\": 100,                \"g\": 100,                \"r\": 600            },            \"lambert\": 1,            \"radius\": 2,            \"type\": \"sphere\"        },        {            \"center\": {                \"x\": -0.9999999999999996,                \"y\": 1.7320508075688776,                \"z\": 5            },            \"color\": {                \"b\": 100,                \"g\": 200,                \"r\": 100            },            \"lambert\": 1,            \"radius\": 2,            \"type\": \"sphere\"        },        {            \"center\": {                \"x\": -0.9999999999999996,                \"y\": -1.7320508075688776,                \"z\": 5            },            \"color\": {                \"b\": 200,                \"g\": 100,                \"r\": 100            },            \"lambert\": 1,            \"radius\": 2,            \"type\": \"sphere\"        },        {            \"center\": {                \"x\": 1,                \"y\": 1,                \"z\": 1            },            \"color\": {                \"b\": 200,                \"g\": 200,                \"r\": 200            },            \"lambert\": 1,            \"radius\": 0.5,            \"type\": \"sphere\"        },        {            \"center\": {                \"x\": 0,                \"y\": 0,                \"z\": 40            },            \"color\": {                \"b\": 100,                \"g\": 100,                \"r\": 100            },            \"lambert\": 1,            \"normal\": {                \"x\": 0,                \"y\": 0,                \"z\": -1            },            \"type\": \"plane\"        },        {            \"center\": {                \"x\": 0,                \"y\": -10,                \"z\": 0            },            \"color\": {                \"b\": 200,                \"g\": 0,                \"r\": 0            },            \"lambert\": 1,            \"normal\": {                \"x\": 0,                \"y\": 1,                \"z\": 0            },            \"type\": \"plane\"        },        {            \"center\": {                \"x\": 0,                \"y\": 10,                \"z\": 0            },            \"color\": {                \"b\": 0,                \"g\": 200,                \"r\": 0            },            \"lambert\": 1,            \"normal\": {                \"x\": 0,                \"y\": -1,                \"z\": 0            },            \"type\": \"plane\"        },        {            \"center\": {                \"x\": -10,                \"y\": 0,                \"z\": 0            },            \"color\": {                \"b\": 100,                \"g\": 100,                \"r\": 100            },            \"lambert\": 1,            \"normal\": {                \"x\": 1,                \"y\": 0,                \"z\": 0            },            \"type\": \"plane\"        },        {            \"center\": {                \"x\": 10,                \"y\": 0,                \"z\": 0            },            \"color\": {                \"b\": 100,                \"g\": 100,                \"r\": 100            },            \"lambert\": 1,            \"normal\": {                \"x\": -1,                \"y\": 0,                \"z\": 0            },            \"type\": \"plane\"        }    ]}";
+	Render a(jsonstuff, false);
+	a.findAllIntersect();
+	a.autoexposure();*/
+}
+
+TEST_CASE("Test scene4.json", "[geometry]") {
+	//string jsonstuff = "{    \"camera\": {        \"center\": {            \"x\": 0,            \"y\": 0,            \"z\": 0        },        \"focus\": 10,        \"normal\": {            \"x\": 0,            \"y\": 0,        },        \"resolution\": [            0.01,            0.01        ],        \"size\": [            256,            256        ]    },    \"lights\": [        {            \"intensity\": 1,            \"location\": {                \"x\": 5,                \"y\": -5,                \"z\": 0            }        }    ],    \"objects\": [        {            \"center\": {                \"x\": 0,                \"y\": 0,                \"z\": 5            },            \"color\": {                \"b\": 0,                \"g\": 0,                \"r\": 255            },            \"lambert\": 1,            \"radius\": 1,            \"type\": \"sphere\"        }    ]}";
+	//Render a(jsonstuff, false);
+	//a.findAllIntersect();
+	//a.autoexposure();
 }

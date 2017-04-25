@@ -5,6 +5,7 @@
 #include <qjsondocument.h>
 #include <qstring.h>
 #include <qfile.h>
+#include <fstream>
 #include <iostream>
 
 JSONParser::JSONParser()
@@ -26,6 +27,12 @@ void JSONParser::readFile(QString filename)
 	temp = file.readAll();
 	file.close();
 	document = QJsonDocument::fromJson(temp.toUtf8());
+	renderInfo = document.object();
+}
+
+void JSONParser::JSONDocFromString(string jsonText)
+{
+	document = QJsonDocument::fromJson(QString::fromStdString(jsonText).toUtf8());
 	renderInfo = document.object();
 }
 
@@ -203,3 +210,18 @@ vector<Objects> JSONParser::returnObjectsVect()
 {
 	return objectsVect;
 }
+
+//string JSONParser::readEntireJsonIntoString(string filename)
+//{
+//	string temp = "";
+//	ifstream in(filename);
+//	int count = 0;
+//	while (!in.fail())
+//	{
+//		string holder;
+//		getline(in, holder, '\n');
+//		temp += holder;
+//		count++;
+//	}
+//	return temp;
+//}

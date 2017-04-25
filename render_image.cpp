@@ -5,20 +5,28 @@
 #include <qfile.h>
 #include <cmath>
 
-Render::Render(string filename)
+Render::Render()
 {
-	json.readFile(QString::fromStdString(filename));
-	json.pullAllInfo();
-	camera = json.returnCamera();
-	lightsVect = json.returnLightsVect();
-	objectsVect = json.returnObjectsVect();
-
 	black.r = 0;
 	black.g = 0;
 	black.b = 0;
 	white.r = 255;
 	white.g = 255;
 	white.b = 255;
+}
+
+Render::Render(string filename, bool isFile)
+{
+	string text = filename;
+	if (isFile) {
+		json.readFile(QString::fromStdString(filename)); json.pullAllInfo();
+		camera = json.returnCamera(); lightsVect = json.returnLightsVect(); objectsVect = json.returnObjectsVect();
+	}
+	else if (!isFile) {
+		json.JSONDocFromString(text); json.pullAllInfo();
+		camera = json.returnCamera(); lightsVect = json.returnLightsVect(); objectsVect = json.returnObjectsVect();
+	}
+	black.r = 0;  black.g = 0; black.b = 0; white.r = 255; white.g = 255; white.b = 255;
 }
 
 Render::~Render()
@@ -29,24 +37,19 @@ Render::~Render()
 void Render::createImage(string filename)
 {
 	image = QImage(camera.size.first, camera.size.second, QImage::Format_ARGB32);
-
-	/*for (unsigned int j = 0; j < image.height(); j++)
-		for (unsigned int i = 0; i < image.width(); i++)
-		{
-			image.setPixelColor(i, j, QColor(255, 0, 0, 255));
-		}*/
 	autoexposure(); // execute this to scale down the colors before creating image
 	int pos = 0;
 	for (unsigned int j = 0; j < image.height(); j++)
-		for (unsigned int i = 0; i < image.width(); i++)
-		{
-			image.setPixelColor(i, j, QColor(pixels[pos].color.r, pixels[pos].color.g, pixels[pos].color.b, 255));
+		for (unsigned int i = 0; i < image.width(); i++) {
+			QColor color(pixels[pos].color.r, pixels[pos].color.g, pixels[pos].color.b);
+			image.setPixel(i, j, color.rgb());
 			pos++;
 		}
-
 	QFile outputFile(QString::fromStdString(filename));
 	outputFile.open(QIODevice::WriteOnly);
-	image.save(&outputFile, "PNG");
+	if (!filename.empty()) {
+		image.save(&outputFile, "PNG");
+	}
 }
 
 void Render::multiplyColorByScale(Color &theColor, double scale)
@@ -103,11 +106,6 @@ Location Render::findDuv(Location point, Location focalPoint)
 double Render::magnitude(Location theVector)
 {
 	return sqrt(pow(theVector.x, 2) + pow(theVector.y, 2) + pow(theVector.z, 2));
-}
-
-double Render::findTca(Location L, Location Duv)
-{
-	return L.x * Duv.x + L.y * Duv.y + L.z * Duv.z;
 }
 
 Location Render::findW(Location focalPoint, Location Duv, double tca)
@@ -188,7 +186,7 @@ bool Render::calculateIntersect(Location point)
 			Location F = findFocalPoint();
 			Location L = findL(objectsVect[objNumber].center, F);
 			Location duv = findDuv(point, F);
-			double tca = findTca(L, duv);
+			double tca = findDotProduct(L, duv);
 			Location w = findW(F, duv, tca);
 			double d = findMagnitudeFirstMinusSecond(w, objectsVect[objNumber].center);
 			double thc = findThc(objectsVect[objNumber].radius, d);
@@ -354,7 +352,7 @@ Location Render::findIntersectPlane(Location centerPlane, double objNumber, Loca
 	nu.z = objectsVect[objNumber].normal.z / magnitude(objectsVect[objNumber].normal);
 	double D = findDotProduct(rayDu, nu);
 	Location planeIntersect;
-	if (D > 0)
+	if (D != 0)
 	{
 		Location focalToCenter = findL(objectsVect[objNumber].center, findFocalPoint());
 		double distFocalToPlaneNormal = findDotProduct(focalToCenter, nu);
@@ -394,4 +392,19 @@ void Render::autoexposure()
 		pixels[i].color.g *= scale;
 		pixels[i].color.b *= scale;
 	}
+}
+
+void Render::setCameraValues(Camera cam)
+{
+	camera = cam;
+}
+
+void Render::setObjectsValues(Objects obj)
+{
+	objectsVect.push_back(obj);
+}
+
+void Render::setLightsValues(Lights lit)
+{
+	lightsVect.push_back(lit);
 }

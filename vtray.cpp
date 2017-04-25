@@ -12,9 +12,11 @@ int main(int argc, char *argv[])
 	//a.readFile("scene1.json");
 	//a.pullAllInfo();
 	//a.printAllInfo();
-	Render b("scene1.json");
-	b.findAllIntersect();
-	b.createImage("output.png");
-	
+	//Render b("snowman.json", true);
+	//b.findAllIntersect();
+	//b.createImage("output.png");
+	JSONParser c;
+	//string hello = c.readEntireJsonIntoString("scene4.json");
+
 	return 0;
 }

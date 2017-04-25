@@ -3,6 +3,7 @@
 
 #include <string>
 #include <qimage.h>
+#include <qcolor.h>
 #include "json_parser.hpp"
 
 using namespace std;
@@ -16,7 +17,8 @@ struct PointNColor {
 class Render
 {
 public:
-	Render(string filename);
+	Render();
+	Render(string filename, bool isFile);
 
 	~Render();
 
@@ -26,7 +28,6 @@ public:
 	Location findL(Location centerObject, Location focalPoint); // distance from the focus to the center of the object
 	Location findDuv(Location point, Location focalPoint);
 	double magnitude(Location theVector);
-	double findTca(Location L, Location Duv);
 	Location findW(Location focalPoint, Location Duv, double tca);
 	double findMagnitudeFirstMinusSecond(Location w, Location centerObject);
 	double findDotProduct(Location first, Location second);
@@ -40,10 +41,16 @@ public:
 
 	Location findIntersectPlane(Location centerPlane, double objNumber, Location point);
 
+	void multiplyColorByScale(Color &theColor, double scale);
 	void autoexposure();
 
+
+	// Test functions
+	void setCameraValues(Camera cam);
+	void setObjectsValues(Objects obj);
+	void setLightsValues(Lights lit);
+
 private:
-	void multiplyColorByScale(Color &theColor, double scale);
 
 	JSONParser json;
 	QImage image;

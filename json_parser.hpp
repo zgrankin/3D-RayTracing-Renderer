@@ -55,6 +55,8 @@ public:
 
 	void readFile(QString filename);
 
+	void JSONDocFromString(string jsonText);
+
 	void pullCameraInfo();
 
 	void pullLightInfo();
@@ -76,6 +78,8 @@ public:
 	vector<Lights> returnLightsVect();
 
 	vector<Objects> returnObjectsVect();
+
+	//string readEntireJsonIntoString(string filename);
 
 private:
 	QJsonDocument document;
