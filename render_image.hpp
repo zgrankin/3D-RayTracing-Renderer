@@ -39,7 +39,9 @@ public:
 	Color findLightContributionSphere(Location crossPoint, Location centerSphere, vector<Lights> lightSources);
 	Color findLightContributionPlane(Location crossPoint, Location centerPlane, vector<Lights> lightSources, Location nu);
 
-	Location findIntersectPlane(Location centerPlane, double objNumber, Location point);
+	Location findIntersectPlane(Location centerPlane, double objNumber, Location point, bool searchShadow);
+
+	bool shadowIntersect(Location F, Location lu, double lightMag, unsigned int objIndex);
 
 	void multiplyColorByScale(Color &theColor, double scale);
 	void autoexposure();
@@ -64,6 +66,8 @@ private:
 	PointNColor intersectionP;
 	double currentObjectLambert;
 	double currentObjectNumber;
+
+	Location objectFocalForShadow;
 };
 
 #endif

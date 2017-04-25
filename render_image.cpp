@@ -76,7 +76,6 @@ Location Render::findFocalPoint()
 		focalPoint = camera.center;
 		focalPoint.z = camera.center.z - camera.focus;
 	}
-
 	return focalPoint;
 }
 
@@ -201,7 +200,7 @@ bool Render::calculateIntersect(Location point)
 			}
 		}
 		else if (objectsVect[objNumber].type == "plane") {
-			intersect.point = findIntersectPlane(objectsVect[objNumber].center, objNumber, point);
+			intersect.point = findIntersectPlane(objectsVect[objNumber].center, objNumber, point, false);
 			if (intersect.point.bad == false) {
 				intersect.color = objectsVect[objNumber].color;
 				ip.push_back(intersect);
@@ -263,6 +262,11 @@ void Render::findAllIntersect()
 		point.z = camera.center.z; // need to fix to handle facing different directions
 		if (calculateIntersect(point))
 		{
+			if (i == 0 && j == 0)
+			{
+				int a;
+				a = 1;
+			}
 			pixel.point.x = i;
 			pixel.point.y = j;
 			
@@ -290,12 +294,14 @@ Color Render::findLightContributionSphere(Location crossPoint, Location centerSp
 	double lambert = currentObjectLambert;
 	vector<Color> colorSummation;
 	nu = findDuv(crossPoint, centerSphere); // normal to sphere unit vector
+	double lightMag;
 	for (int i = 0; i < lightSources.size(); i++)
 	{
+		lightMag = magnitude(findL(lightSources[i].theLocation, crossPoint));
 		color = intersectionP.color;
 		lu = findDuv(lightSources[i].theLocation, crossPoint); // normal to light unit vector
 		lightScaleFactor = findDotProduct(nu, lu) * lightSources[i].intensity * lambert;
-		if (lightScaleFactor < 0) {
+		if (lightScaleFactor < 0 || shadowIntersect(crossPoint, lu, lightMag,currentObjectNumber))  {
 			lightScaleFactor = 0;
 		}
 		multiplyColorByScale(color, lightScaleFactor); // modify the color by reference
@@ -320,12 +326,14 @@ Color Render::findLightContributionPlane(Location crossPoint, Location centerPla
 	Color color;
 	double lambert = currentObjectLambert;
 	vector<Color> colorSummation;
+	double lightMag;
 	for (int i = 0; i < lightSources.size(); i++)
 	{
+		lightMag = magnitude(findL(lightSources[i].theLocation, crossPoint));
 		color = intersectionP.color;
 		lu = findDuv(lightSources[i].theLocation, crossPoint); // normal to light unit vector
 		lightScaleFactor = findDotProduct(nu, lu) * lightSources[i].intensity * lambert;
-		if (lightScaleFactor < 0) {
+		if (lightScaleFactor < 0 || shadowIntersect(crossPoint, lu, lightMag, currentObjectNumber)) {
 			lightScaleFactor = 0;
 		}
 		multiplyColorByScale(color, lightScaleFactor); // modify the color by reference
@@ -343,10 +351,19 @@ Color Render::findLightContributionPlane(Location crossPoint, Location centerPla
 	return color;
 }
 
-Location Render::findIntersectPlane(Location centerPlane, double objNumber, Location point)
+Location Render::findIntersectPlane(Location centerPlane, double objNumber, Location point, bool searchShadow) // if search shadow is true then the point passed in is actually light unit vector
 {
-	Location rayDu = findDuv(point, findFocalPoint()); // equivalent to Ru in diagram
-	Location nu; // normal unit vector
+	Location focalPoint;
+	Location rayDu, nu;
+	if (!searchShadow) {
+		rayDu = findDuv(point, findFocalPoint()); // equivalent to Ru in diagram
+		focalPoint = findFocalPoint();
+	}
+	else if (searchShadow) {
+		rayDu = point;
+		focalPoint = objectFocalForShadow;
+	}
+	nu; // normal unit vector
 	nu.x = objectsVect[objNumber].normal.x / magnitude(objectsVect[objNumber].normal);
 	nu.y = objectsVect[objNumber].normal.y / magnitude(objectsVect[objNumber].normal);
 	nu.z = objectsVect[objNumber].normal.z / magnitude(objectsVect[objNumber].normal);
@@ -354,12 +371,12 @@ Location Render::findIntersectPlane(Location centerPlane, double objNumber, Loca
 	Location planeIntersect;
 	if (D != 0)
 	{
-		Location focalToCenter = findL(objectsVect[objNumber].center, findFocalPoint());
+		Location focalToCenter = findL(objectsVect[objNumber].center, focalPoint);
 		double distFocalToPlaneNormal = findDotProduct(focalToCenter, nu);
 		double iterationsToPlane = distFocalToPlaneNormal / D; // t in diagram
-		planeIntersect.x = findFocalPoint().x + iterationsToPlane * rayDu.x;
-		planeIntersect.y = findFocalPoint().y + iterationsToPlane * rayDu.y;
-		planeIntersect.z = findFocalPoint().z + iterationsToPlane * rayDu.z;
+		planeIntersect.x = focalPoint.x + iterationsToPlane * rayDu.x;
+		planeIntersect.y = focalPoint.y + iterationsToPlane * rayDu.y;
+		planeIntersect.z = focalPoint.z + iterationsToPlane * rayDu.z;
 
 		if (iterationsToPlane < 0) {
 			planeIntersect.bad = true;
@@ -368,9 +385,45 @@ Location Render::findIntersectPlane(Location centerPlane, double objNumber, Loca
 			planeIntersect.bad = false;
 		}
 	}
-	else planeIntersect.bad = true;
+	else {
+		planeIntersect.bad = true;
+	}
 
 	return planeIntersect;
+}
+
+bool Render::shadowIntersect(Location F, Location lu, double lightMag, unsigned int objectIndex) // where F is intersection point on object
+{
+	vector<PointNColor> ip;
+	PointNColor intersect;
+	objectFocalForShadow = F;
+	vector<double> objLambertVect, objNumbVect;
+	for (unsigned int objNumber = 0; objNumber < objectsVect.size(); objNumber++) {
+		if (objectIndex != objNumber) {
+			if (objectsVect[objNumber].type == "sphere") {
+				Location L = findL(objectsVect[objNumber].center, F);
+				double tca = findDotProduct(L, lu);
+				Location w = findW(F, lu, tca);
+				double d = findMagnitudeFirstMinusSecond(w, objectsVect[objNumber].center);
+				double thc = findThc(objectsVect[objNumber].radius, d);
+				if (thc != -1) {
+					intersect.point = findClosestIntersect(F, lu, tca, thc);
+					if (intersect.point.bad == false && (magnitude(findL(intersect.point, F)) < lightMag) && 
+						findDotProduct(findL(intersect.point, camera.center), camera.normal) > 0) {
+						return true;
+					}
+				}
+			}
+			else if (objectsVect[objNumber].type == "plane") {
+				intersect.point = findIntersectPlane(objectsVect[objNumber].center, objNumber, lu, true);
+				if (intersect.point.bad == false && (magnitude(findL(intersect.point, F)) < lightMag) &&
+					findDotProduct(findL(intersect.point, camera.center), camera.normal) > 0) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
 }
 
 void Render::autoexposure()
