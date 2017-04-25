@@ -79,6 +79,8 @@ public:
 
 	vector<Objects> returnObjectsVect();
 
+	double magnitude(Location theVector);
+
 	//string readEntireJsonIntoString(string filename);
 
 private:

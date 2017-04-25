@@ -7,8 +7,34 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-	Render b("scene2.json", true);
-	b.findAllIntersect();
-	b.createImage("output.png");
-	return 0;
+	try {
+		if (argc != 3 && argc != 5) {
+			cerr << "Error: Incorrect number of arguments." << endl;
+			return EXIT_FAILURE;
+		}
+		else if (argc == 3) {
+			string inputFilename = argv[1];
+			string outputFilename = argv[2];
+			Render b(inputFilename, true);
+			b.findAllIntersect();
+			b.createImage(outputFilename);
+		}
+		else if (argc == 5) {
+			if (argv[1] != "-t") {
+				cerr << "Error: Invalid command" << endl;
+				return EXIT_FAILURE;
+			}
+			string inputFilename = argv[3];
+			string outputFilename = argv[4];
+			Render b(inputFilename, true);
+			b.findAllIntersect();
+			b.createImage(outputFilename);
+		}
+	}
+	catch (exception& ex)
+	{
+		return EXIT_FAILURE;
+	}
+
+	return EXIT_SUCCESS;
 }

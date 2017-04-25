@@ -47,17 +47,15 @@ public:
 	Location multiplyVectorByScale(Location loc, double scale);
 	void autoexposure();
 
-	Location computeCrossProduct(Location a, Location b);
-	Location panRuv(Location cuv, Location upuv);
-	Location panUuv(Location panRuv, Location cuv);
-
-
 	// Test functions
 	void setCameraValues(Camera cam);
-	void setObjectsValues(Objects obj);
-	void setLightsValues(Lights lit);
+	//void setObjectsValues(Objects obj);
+	//void setLightsValues(Lights lit);
 
 private:
+	Location computeCrossProduct(Location a, Location b);
+	Location findpanRuv(Location cnuv, Location upuv);
+	Location findpanUuv(Location panRuv, Location cnuv);
 
 	JSONParser json;
 	QImage image;
@@ -75,6 +73,8 @@ private:
 	Location objectFocalForShadow;
 
 	Location upuv;
+	Location panRuv;
+	Location panUuv;
 };
 
 #endif

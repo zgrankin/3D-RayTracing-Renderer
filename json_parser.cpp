@@ -18,17 +18,19 @@ JSONParser::~JSONParser()
 
 }
 
-void JSONParser::readFile(QString filename)
-{
-	QString temp;
-	QFile file;
-	file.setFileName(filename);
-	file.open(QIODevice::ReadOnly | QIODevice::Text);
-	temp = file.readAll();
-	file.close();
-	document = QJsonDocument::fromJson(temp.toUtf8());
-	renderInfo = document.object();
-}
+void JSONParser::readFile(QString filename){ QString temp; QFile file;file.setFileName(filename);file.open(QIODevice::ReadOnly | QIODevice::Text);temp = file.readAll();file.close();document = QJsonDocument::fromJson(temp.toUtf8());renderInfo = document.object();}
+
+//void JSONParser::readFile(QString filename)
+//{
+//	QString temp;
+//	QFile file;
+//	file.setFileName(filename);
+//	file.open(QIODevice::ReadOnly | QIODevice::Text);
+//	temp = file.readAll();
+//	file.close();
+//	document = QJsonDocument::fromJson(temp.toUtf8());
+//	renderInfo = document.object();
+//}
 
 void JSONParser::JSONDocFromString(string jsonText)
 {
@@ -39,32 +41,30 @@ void JSONParser::JSONDocFromString(string jsonText)
 void JSONParser::pullCameraInfo()
 {
 	QJsonObject cameraObject = renderInfo["camera"].toObject();
+	// store center
+	camera.center.x = cameraObject["center"].toObject()["x"].toDouble();
+	camera.center.y = cameraObject["center"].toObject()["y"].toDouble();
+	camera.center.z = cameraObject["center"].toObject()["z"].toDouble();
 
-	try {
-		// store center
-		camera.center.x = cameraObject["center"].toObject()["x"].toDouble();
-		camera.center.y = cameraObject["center"].toObject()["y"].toDouble();
-		camera.center.z = cameraObject["center"].toObject()["z"].toDouble();
+	// store focus
+	camera.focus = cameraObject["focus"].toDouble();
 
-		// store focus
-		camera.focus = cameraObject["focus"].toDouble();
-
-		// store normal
-		camera.normal.x = cameraObject["normal"].toObject()["x"].toDouble();
-		camera.normal.y = cameraObject["normal"].toObject()["y"].toDouble();
-		camera.normal.z = cameraObject["normal"].toObject()["z"].toDouble();
-
-		// store resolution
-		camera.resolution.first  = cameraObject["resolution"].toArray()[0].toDouble();
-		camera.resolution.second = cameraObject["resolution"].toArray()[1].toDouble();
-
-		// store size
-		camera.size.first  = cameraObject["size"].toArray()[1].toDouble();
-		camera.size.second = cameraObject["size"].toArray()[1].toDouble();
+	// store normal
+	camera.normal.x = cameraObject["normal"].toObject()["x"].toDouble();
+	camera.normal.y = cameraObject["normal"].toObject()["y"].toDouble();
+	camera.normal.z = cameraObject["normal"].toObject()["z"].toDouble();
+	if (magnitude(camera.normal) == 0) {
+		cerr << "Error: File Reading Error.";
+		throw runtime_error("Error: File Reading Error.");
 	}
-	catch (exception& e) {
-		throw runtime_error("Error: Camera is missing critical information");
-	}
+
+	// store resolution
+	camera.resolution.first  = cameraObject["resolution"].toArray()[0].toDouble();
+	camera.resolution.second = cameraObject["resolution"].toArray()[1].toDouble();
+
+	// store size
+	camera.size.first  = cameraObject["size"].toArray()[1].toDouble();
+	camera.size.second = cameraObject["size"].toArray()[1].toDouble();
 }
 
 void JSONParser::pullLightInfo()
@@ -97,33 +97,30 @@ void JSONParser::pullObjectInfo()
 
 	for (unsigned int i = 0; i < SIZE; i++)
 	{
-		try {
-			temp.center.x = objectsJSONArray[i].toObject()["center"].toObject()["x"].toDouble();
-			temp.center.y = objectsJSONArray[i].toObject()["center"].toObject()["y"].toDouble();
-			temp.center.z = objectsJSONArray[i].toObject()["center"].toObject()["z"].toDouble();
-			temp.color.r = objectsJSONArray[i].toObject()["color"].toObject()["r"].toDouble();
-			temp.color.g = objectsJSONArray[i].toObject()["color"].toObject()["g"].toDouble();
-			temp.color.b = objectsJSONArray[i].toObject()["color"].toObject()["b"].toDouble();
-			temp.lambert = objectsJSONArray[i].toObject()["lambert"].toDouble();
-			temp.type = objectsJSONArray[i].toObject()["type"].toString().toStdString();
+		temp.center.x = objectsJSONArray[i].toObject()["center"].toObject()["x"].toDouble();
+		temp.center.y = objectsJSONArray[i].toObject()["center"].toObject()["y"].toDouble();
+		temp.center.z = objectsJSONArray[i].toObject()["center"].toObject()["z"].toDouble();
+		temp.color.r = objectsJSONArray[i].toObject()["color"].toObject()["r"].toDouble();
+		temp.color.g = objectsJSONArray[i].toObject()["color"].toObject()["g"].toDouble();
+		temp.color.b = objectsJSONArray[i].toObject()["color"].toObject()["b"].toDouble();
+		if (temp.color.r < 0 || temp.color.r > 255 || temp.color.g < 0 || temp.color.g > 255 || temp.color.b < 0 || temp.color.b > 255){cerr << "Error: Color must be greater than 0 and less than 255."; throw runtime_error("Color probs");}
 
-			if (temp.type == "sphere") {
-				temp.radius = objectsJSONArray[i].toObject()["radius"].toDouble();
-			}
-			else if (temp.type == "plane") {
-				temp.normal.x = objectsJSONArray[i].toObject()["normal"].toObject()["x"].toDouble();
-				temp.normal.y = objectsJSONArray[i].toObject()["normal"].toObject()["y"].toDouble();
-				temp.normal.z = objectsJSONArray[i].toObject()["normal"].toObject()["z"].toDouble();
-			}
-			else {
-				throw runtime_error("Error: Object is not of defined type.");
-			}
+		temp.lambert = objectsJSONArray[i].toObject()["lambert"].toDouble();
+		temp.type = objectsJSONArray[i].toObject()["type"].toString().toStdString();
 
-			objectsVect.push_back(temp);
+		if (temp.type == "sphere") {
+			temp.radius = objectsJSONArray[i].toObject()["radius"].toDouble();
 		}
-		catch (exception& e) {
-			throw runtime_error("Error: Objects are missing critical information");
+		else if (temp.type == "plane") {
+			temp.normal.x = objectsJSONArray[i].toObject()["normal"].toObject()["x"].toDouble();
+			temp.normal.y = objectsJSONArray[i].toObject()["normal"].toObject()["y"].toDouble();
+			temp.normal.z = objectsJSONArray[i].toObject()["normal"].toObject()["z"].toDouble();
 		}
+		else {
+			throw runtime_error("Error: Object is not of defined type.");
+		}
+
+		objectsVect.push_back(temp);
 	}
 }
 
@@ -209,6 +206,11 @@ vector<Lights> JSONParser::returnLightsVect()
 vector<Objects> JSONParser::returnObjectsVect()
 {
 	return objectsVect;
+}
+
+double JSONParser::magnitude(Location theVector)
+{
+	return sqrt(pow(theVector.x, 2) + pow(theVector.y, 2) + pow(theVector.z, 2));
 }
 
 //string JSONParser::readEntireJsonIntoString(string filename)

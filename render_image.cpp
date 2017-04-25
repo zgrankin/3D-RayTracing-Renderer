@@ -16,6 +16,8 @@ Render::Render()
 	upuv.x = 0;
 	upuv.y = -1;
 	upuv.z = 0;
+	panRuv = findpanRuv(camera.normal, upuv);
+	panUuv = findpanUuv(panRuv, camera.normal);
 }
 
 Render::Render(string filename, bool isFile)
@@ -23,14 +25,13 @@ Render::Render(string filename, bool isFile)
 	string text = filename;
 	if (isFile) {
 		json.readFile(QString::fromStdString(filename)); json.pullAllInfo();
-		camera = json.returnCamera(); lightsVect = json.returnLightsVect(); objectsVect = json.returnObjectsVect();
-	}
+		camera = json.returnCamera(); lightsVect = json.returnLightsVect(); objectsVect = json.returnObjectsVect(); }
 	else if (!isFile) {
 		json.JSONDocFromString(text); json.pullAllInfo();
-		camera = json.returnCamera(); lightsVect = json.returnLightsVect(); objectsVect = json.returnObjectsVect();
-	}
-	black.r = 0;  black.g = 0; black.b = 0; white.r = 255; white.g = 255; white.b = 255;
-	upuv.x = 0; upuv.y = -1; upuv.z = 0;
+		camera = json.returnCamera(); lightsVect = json.returnLightsVect(); objectsVect = json.returnObjectsVect(); }
+	black.r = 0;  black.g = 0; black.b = 0; white.r = 255; white.g = 255; white.b = 255; upuv.x = 0; upuv.y = -1; upuv.z = 0;
+	panRuv = findpanRuv(camera.normal, upuv);
+	panUuv = findpanUuv(panRuv, camera.normal);
 }
 
 Render::~Render()
@@ -263,9 +264,10 @@ void Render::findAllIntersect()
 	for (double j = starty; j < endy; j++)
 		for (double i = startx; i < endx; i++)
 	{
-		point.x = i * camera.resolution.first;
-		point.y = j * camera.resolution.second;
-		point.z = camera.center.z; // need to fix to handle facing different directions
+		point.x = camera.center.x + (multiplyVectorByScale(panRuv, camera.resolution.first * i)).x + (multiplyVectorByScale(panUuv, camera.resolution.second * j)).x;
+		point.y = camera.center.y + (multiplyVectorByScale(panRuv, camera.resolution.first * i)).y + (multiplyVectorByScale(panUuv, camera.resolution.second * j)).y;
+		point.z = camera.center.z + (multiplyVectorByScale(panRuv, camera.resolution.first * i)).z + (multiplyVectorByScale(panUuv, camera.resolution.second * j)).z;
+
 		if (calculateIntersect(point))
 		{
 			if (i == 0 && j == 0)
@@ -459,20 +461,21 @@ Location Render::computeCrossProduct(Location a, Location b)
 	result.x = a.y * b.z - b.y * a.z;
 	result.y = b.x * a.z - a.x * b.z;
 	result.z = a.x * b.y - b.x * a.y;
+	return result;
 }
 
-Location Render::panRuv(Location cuv, Location upuv)
+Location Render::findpanRuv(Location cnuv, Location upuv)
 {
 	Location z; z.x = 0; z.y = 0; z.z = 0;
-	Location result = computeCrossProduct(cuv, upuv);
-	findDuv(result, z);
+	Location result = computeCrossProduct(cnuv, upuv);
+	return findDuv(result, z);
 }
 
-Location Render::panUuv(Location panRuv, Location cuv)
+Location Render::findpanUuv(Location panRuv, Location cnuv)
 {
 	Location z; z.x = 0; z.y = 0; z.z = 0;
-	Location result = computeCrossProduct(panRuv, cuv);
-	findDuv(result, z);
+	Location result = computeCrossProduct(cnuv, panRuv); // PAY ATTENTION TO ORDER, IF DON'T SWITCH ARGS IMAGE UPSIDE DOWN
+	return findDuv(result, z);
 }
 
 void Render::setCameraValues(Camera cam)
@@ -480,12 +483,12 @@ void Render::setCameraValues(Camera cam)
 	camera = cam;
 }
 
-void Render::setObjectsValues(Objects obj)
-{
-	objectsVect.push_back(obj);
-}
+//void Render::setObjectsValues(Objects obj)
+//{
+//	objectsVect.push_back(obj);
+//}
 
-void Render::setLightsValues(Lights lit)
-{
-	lightsVect.push_back(lit);
-}
+//void Render::setLightsValues(Lights lit)
+//{
+//	lightsVect.push_back(lit);
+//}
