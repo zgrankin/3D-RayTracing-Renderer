@@ -191,7 +191,7 @@ bool Render::calculateIntersect(Location point)
 			double thc = findThc(objectsVect[objNumber].radius, d);
 			if (thc != -1) {
 				intersect.point = findClosestIntersect(F, duv, tca, thc);
-				if (intersect.point.bad == false) {
+				if (intersect.point.bad == false && findDotProduct(findL(intersect.point, camera.center), camera.normal) > 0) {
 					intersect.color = objectsVect[objNumber].color;
 					ip.push_back(intersect);
 					objLambertVect.push_back(objectsVect[objNumber].lambert);
@@ -201,7 +201,7 @@ bool Render::calculateIntersect(Location point)
 		}
 		else if (objectsVect[objNumber].type == "plane") {
 			intersect.point = findIntersectPlane(objectsVect[objNumber].center, objNumber, point, false);
-			if (intersect.point.bad == false) {
+			if (intersect.point.bad == false && findDotProduct(findL(intersect.point, camera.center), camera.normal) > 0) {
 				intersect.color = objectsVect[objNumber].color;
 				ip.push_back(intersect);
 				objLambertVect.push_back(objectsVect[objNumber].lambert);
