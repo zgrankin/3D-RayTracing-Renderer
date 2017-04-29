@@ -8,11 +8,7 @@ using namespace std;
 int main(int argc, char *argv[])
 {
 	try {
-		if (argc != 3 && argc != 5) {
-			cerr << "Error: Incorrect number of arguments." << endl;
-			return EXIT_FAILURE;
-		}
-		else if (argc == 3) {
+		if (argc == 3) {
 			string inputFilename = argv[1];
 			string outputFilename = argv[2];
 			Render b(inputFilename, true);
@@ -29,6 +25,10 @@ int main(int argc, char *argv[])
 			Render b(inputFilename, true);
 			b.findAllIntersect();
 			b.createImage(outputFilename);
+		}
+		else if (argc != 3 && argc != 5) {
+			cerr << "Error: Incorrect number of arguments." << endl;
+			throw runtime_error("bad args");
 		}
 	}
 	catch (exception& ex)

@@ -41,7 +41,7 @@ public:
 
 	Location findIntersectPlane(Location centerPlane, double objNumber, Location point, bool searchShadow);
 
-	bool shadowIntersect(Location F, Location lu, double lightMag, unsigned int objIndex);
+	bool shadowIntersect(Location F, Location lu, double lightMag, unsigned int objectIndex);
 
 	void multiplyColorByScale(Color &theColor, double scale);
 	Location multiplyVectorByScale(Location loc, double scale);

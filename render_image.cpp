@@ -44,12 +44,13 @@ void Render::createImage(string filename)
 	image = QImage(camera.size.first, camera.size.second, QImage::Format_ARGB32);
 	autoexposure(); // execute this to scale down the colors before creating image
 	int pos = 0;
-	for (unsigned int j = 0; j < image.height(); j++)
+	for (unsigned int j = 0; j < image.height(); j++) {
 		for (unsigned int i = 0; i < image.width(); i++) {
 			QColor color(pixels[pos].color.r, pixels[pos].color.g, pixels[pos].color.b);
 			image.setPixel(i, j, color.rgb());
 			pos++;
 		}
+	}
 	QFile outputFile(QString::fromStdString(filename));
 	outputFile.open(QIODevice::WriteOnly);
 	if (!filename.empty()) {
@@ -164,21 +165,25 @@ Location Render::findClosestIntersect(Location focalPoint, Location Duv, double 
 	intersect2.z = focalPoint.z + (Duv.z * (tca + thc));
 	magnitude2 = magnitude(intersect2);
 
-	if ((tca - thc) > 0 && (tca + thc) < 0)
+	if ((tca - thc) > 0 && (tca + thc) < 0) {
 		closestIntersect = intersect1;
-	else if ((tca - thc) < 0 && (tca + thc) > 0)
+	}
+	else if ((tca - thc) < 0 && (tca + thc) > 0) {
 		closestIntersect = intersect2;
+	}
 	else if ((tca - thc) < 0 && (tca + thc) < 0) {
 		closestIntersect = intersect1;
 		closestIntersect.bad = true;
 	}
-	else if (magnitude1 < magnitude2)
+	else if (magnitude1 < magnitude2) {
 		closestIntersect = intersect1;
-	else if (magnitude2 < magnitude1)
+	}
+	else if (magnitude2 < magnitude1) {
 		closestIntersect = intersect2;
-	else
+	}
+	else {
 		closestIntersect = intersect1;
-
+	}
 	return closestIntersect;
 }
 
@@ -216,8 +221,7 @@ bool Render::calculateIntersect(Location point)
 			}
 		}
 	}
-	if (determineClosestObject(ip, objLambertVect, objNumbVect)) return true; // will modify private variable value to set current intersectionP we will be looking at
-	else return false;
+	return (determineClosestObject(ip, objLambertVect, objNumbVect)); // will modify private variable value to set current intersectionP we will be looking at
 }
 
 bool Render::determineClosestObject(vector<PointNColor> ip, vector<double> objLambertVect, vector<double> objNumbVect)
@@ -261,35 +265,36 @@ void Render::findAllIntersect()
 	starty = -1 * (camera.size.second) / 2;
 	endy = (camera.size.second) / 2;
 
-	for (double j = starty; j < endy; j++)
+	for (double j = starty; j < endy; j++) {
 		for (double i = startx; i < endx; i++)
-	{
-		point.x = camera.center.x + (multiplyVectorByScale(panRuv, camera.resolution.first * i)).x + (multiplyVectorByScale(panUuv, camera.resolution.second * j)).x;
-		point.y = camera.center.y + (multiplyVectorByScale(panRuv, camera.resolution.first * i)).y + (multiplyVectorByScale(panUuv, camera.resolution.second * j)).y;
-		point.z = camera.center.z + (multiplyVectorByScale(panRuv, camera.resolution.first * i)).z + (multiplyVectorByScale(panUuv, camera.resolution.second * j)).z;
+		{
+			point.x = camera.center.x + (multiplyVectorByScale(panRuv, camera.resolution.first * i)).x + (multiplyVectorByScale(panUuv, camera.resolution.second * j)).x;
+			point.y = camera.center.y + (multiplyVectorByScale(panRuv, camera.resolution.first * i)).y + (multiplyVectorByScale(panUuv, camera.resolution.second * j)).y;
+			point.z = camera.center.z + (multiplyVectorByScale(panRuv, camera.resolution.first * i)).z + (multiplyVectorByScale(panUuv, camera.resolution.second * j)).z;
 
-		if (calculateIntersect(point))
-		{
-			if (i == 0 && j == 0)
+			if (calculateIntersect(point))
 			{
-				int a;
-				a = 1;
+				if (i == 0 && j == 0)
+				{
+					int a;
+					a = 1;
+				}
+				pixel.point.x = i;
+				pixel.point.y = j;
+
+				if (objectsVect[currentObjectNumber].type == "sphere")
+					pixel.color = findLightContributionSphere(intersectionP.point, objectsVect[currentObjectNumber].center, lightsVect);
+				else if (objectsVect[currentObjectNumber].type == "plane")
+					pixel.color = findLightContributionPlane(intersectionP.point, objectsVect[currentObjectNumber].center, lightsVect, objectsVect[currentObjectNumber].normal);
+				pixels.push_back(pixel);
 			}
-			pixel.point.x = i;
-			pixel.point.y = j;
-			
-			if (objectsVect[currentObjectNumber].type == "sphere")
-				pixel.color = findLightContributionSphere(intersectionP.point, objectsVect[currentObjectNumber].center, lightsVect);
-			else if (objectsVect[currentObjectNumber].type == "plane")
-				pixel.color = findLightContributionPlane(intersectionP.point, objectsVect[currentObjectNumber].center, lightsVect, objectsVect[currentObjectNumber].normal);
-			pixels.push_back(pixel);
-		}
-		else
-		{
-			pixel.point.x = i;
-			pixel.point.y = j;
-			pixel.color = black;
-			pixels.push_back(pixel);
+			else
+			{
+				pixel.point.x = i;
+				pixel.point.y = j;
+				pixel.color = black;
+				pixels.push_back(pixel);
+			}
 		}
 	}
 }
