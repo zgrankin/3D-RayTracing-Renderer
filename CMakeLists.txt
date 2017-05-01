@@ -30,11 +30,19 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # create unittests
 add_executable(unittests catch.hpp ${test_src} ${src})
-target_link_libraries(unittests Qt5::Gui)
+if(UNIX AND CMAKE_COMPILER_IS_GNUCXX)
+  target_link_libraries(unittests Qt5::Gui pthread)
+else(UNIX AND CMAKE_COMPILER_IS_GNUCXX)  
+  target_link_libraries(unittests Qt5::Gui)
+endif()
 
 # create the vtray executable
 add_executable(vtray vtray.cpp ${src})
-target_link_libraries(vtray Qt5::Gui)
+if(UNIX AND CMAKE_COMPILER_IS_GNUCXX)
+  target_link_libraries(vtray Qt5::Gui pthread)
+else(UNIX AND CMAKE_COMPILER_IS_GNUCXX)  
+  target_link_libraries(vtray Qt5::Gui)
+endif()
 
 enable_testing()
 

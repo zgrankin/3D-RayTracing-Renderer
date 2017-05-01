@@ -3,7 +3,10 @@
 #include <qimage.h>
 #include <qstring.h>
 #include <qfile.h>
+#include <iostream>
 #include <cmath>
+
+mutex mu;
 
 Render::Render()
 {
@@ -18,6 +21,7 @@ Render::Render()
 	upuv.z = 0;
 	panRuv = findpanRuv(camera.normal, upuv);
 	panUuv = findpanUuv(panRuv, camera.normal);
+	pixels.resize(camera.size.first * camera.size.second);
 }
 
 Render::Render(string filename, bool isFile)
@@ -32,6 +36,7 @@ Render::Render(string filename, bool isFile)
 	black.r = 0;  black.g = 0; black.b = 0; white.r = 255; white.g = 255; white.b = 255; upuv.x = 0; upuv.y = -1; upuv.z = 0;
 	panRuv = findpanRuv(camera.normal, upuv);
 	panUuv = findpanUuv(panRuv, camera.normal);
+	pixels.resize(camera.size.first * camera.size.second);
 }
 
 Render::~Render()
@@ -187,7 +192,7 @@ Location Render::findClosestIntersect(Location focalPoint, Location Duv, double 
 	return closestIntersect;
 }
 
-bool Render::calculateIntersect(Location point)
+bool Render::calculateIntersect(Location point, PointNColor &intersectionP, double &currentObjectLambert, double &currentObjectNumber)
 {
 	vector<PointNColor> ip;
 	PointNColor intersect;
@@ -212,7 +217,7 @@ bool Render::calculateIntersect(Location point)
 			}
 		}
 		else if (objectsVect[objNumber].type == "plane") {
-			intersect.point = findIntersectPlane(objectsVect[objNumber].center, objNumber, point, false);
+			intersect.point = findIntersectPlane(objectsVect[objNumber].center, objNumber, point, false, emptyLoc);
 			if (intersect.point.bad == false && findDotProduct(findL(intersect.point, camera.center), camera.normal) > 0) {
 				intersect.color = objectsVect[objNumber].color;
 				ip.push_back(intersect);
@@ -221,10 +226,10 @@ bool Render::calculateIntersect(Location point)
 			}
 		}
 	}
-	return (determineClosestObject(ip, objLambertVect, objNumbVect)); // will modify private variable value to set current intersectionP we will be looking at
+	return (determineClosestObject(ip, objLambertVect, objNumbVect, intersectionP, currentObjectLambert, currentObjectNumber)); // will modify private variable value to set current intersectionP we will be looking at
 }
 
-bool Render::determineClosestObject(vector<PointNColor> ip, vector<double> objLambertVect, vector<double> objNumbVect)
+bool Render::determineClosestObject(vector<PointNColor> ip, vector<double> objLambertVect, vector<double> objNumbVect, PointNColor &intersectionP, double &currentObjectLambert, double &currentObjectNumber)
 {
 	if (ip.empty()) {
 		return false;
@@ -254,52 +259,54 @@ bool Render::determineClosestObject(vector<PointNColor> ip, vector<double> objLa
 	}
 }
 
-void Render::findAllIntersect()
+void Render::findAllIntersect(int numThreads, int curThread)
 {
 	Location point;
-	PointNColor pixel;
-	double startx, endx;
-	double starty, endy;
+	PointNColor pixel, intersectionP;
+	double startx, endx, currentObjectLambert, starty, endy, currentObjectNumber;
+
 	startx = -1 * (camera.size.first) / 2;
 	endx = (camera.size.first) / 2;
 	starty = -1 * (camera.size.second) / 2;
 	endy = (camera.size.second) / 2;
+	int sectionSize = (-starty + endy) / numThreads;
+	starty = starty + sectionSize * curThread;
+	endy = starty + sectionSize;
 
+	int count = 0;
 	for (double j = starty; j < endy; j++) {
 		for (double i = startx; i < endx; i++)
 		{
+			count = (j + camera.size.first/2) * camera.size.first + (i + camera.size.first/2);
 			point.x = camera.center.x + (multiplyVectorByScale(panRuv, camera.resolution.first * i)).x + (multiplyVectorByScale(panUuv, camera.resolution.second * j)).x;
 			point.y = camera.center.y + (multiplyVectorByScale(panRuv, camera.resolution.first * i)).y + (multiplyVectorByScale(panUuv, camera.resolution.second * j)).y;
 			point.z = camera.center.z + (multiplyVectorByScale(panRuv, camera.resolution.first * i)).z + (multiplyVectorByScale(panUuv, camera.resolution.second * j)).z;
 
-			if (calculateIntersect(point))
+			if (calculateIntersect(point, intersectionP, currentObjectLambert, currentObjectNumber))
 			{
-				if (i == 0 && j == 0)
-				{
-					int a;
-					a = 1;
-				}
 				pixel.point.x = i;
 				pixel.point.y = j;
 
 				if (objectsVect[currentObjectNumber].type == "sphere")
-					pixel.color = findLightContributionSphere(intersectionP.point, objectsVect[currentObjectNumber].center, lightsVect);
+					pixel.color = findLightContributionSphere(intersectionP.point, objectsVect[currentObjectNumber].center, lightsVect, intersectionP, currentObjectLambert, currentObjectNumber);
 				else if (objectsVect[currentObjectNumber].type == "plane")
-					pixel.color = findLightContributionPlane(intersectionP.point, objectsVect[currentObjectNumber].center, lightsVect, objectsVect[currentObjectNumber].normal);
-				pixels.push_back(pixel);
+					pixel.color = findLightContributionPlane(intersectionP.point, objectsVect[currentObjectNumber].center, lightsVect, objectsVect[currentObjectNumber].normal, intersectionP, currentObjectLambert, currentObjectNumber);
 			}
 			else
 			{
 				pixel.point.x = i;
 				pixel.point.y = j;
 				pixel.color = black;
-				pixels.push_back(pixel);
 			}
+			mu.lock();
+			pixels[count] = pixel;
+			count++;
+			mu.unlock();
 		}
 	}
 }
 
-Color Render::findLightContributionSphere(Location crossPoint, Location centerSphere, vector<Lights> lightSources)
+Color Render::findLightContributionSphere(Location crossPoint, Location centerSphere, vector<Lights> lightSources, PointNColor intersectionP, double currentObjectLambert, double currentObjectNumber)
 {
 	Location nu, lu;
 	double lightScaleFactor;
@@ -332,7 +339,7 @@ Color Render::findLightContributionSphere(Location crossPoint, Location centerSp
 	return color;
 }
 
-Color Render::findLightContributionPlane(Location crossPoint, Location centerPlane, vector<Lights> lightSources, Location nu)
+Color Render::findLightContributionPlane(Location crossPoint, Location centerPlane, vector<Lights> lightSources, Location nu, PointNColor intersectionP, double currentObjectLambert, double currentObjectNumber)
 {
 	Location lu;
 	double lightScaleFactor;
@@ -364,7 +371,7 @@ Color Render::findLightContributionPlane(Location crossPoint, Location centerPla
 	return color;
 }
 
-Location Render::findIntersectPlane(Location centerPlane, double objNumber, Location point, bool searchShadow) // if search shadow is true then the point passed in is actually light unit vector
+Location Render::findIntersectPlane(Location centerPlane, double objNumber, Location point, bool searchShadow, Location objectFocalForShadow) // if search shadow is true then the point passed in is actually light unit vector
 {
 	Location focalPoint;
 	Location rayDu, nu;
@@ -409,7 +416,7 @@ bool Render::shadowIntersect(Location F, Location lu, double lightMag, unsigned 
 {
 	vector<PointNColor> ip;
 	PointNColor intersect;
-	objectFocalForShadow = F;
+
 	vector<double> objLambertVect, objNumbVect;
 	for (unsigned int objNumber = 0; objNumber < objectsVect.size(); objNumber++) {
 		if (objectIndex != objNumber) {
@@ -428,7 +435,7 @@ bool Render::shadowIntersect(Location F, Location lu, double lightMag, unsigned 
 				}
 			}
 			else if (objectsVect[objNumber].type == "plane") {
-				intersect.point = findIntersectPlane(objectsVect[objNumber].center, objNumber, lu, true);
+				intersect.point = findIntersectPlane(objectsVect[objNumber].center, objNumber, lu, true, F);
 				if (intersect.point.bad == false && (magnitude(findL(intersect.point, F)) < lightMag) &&
 					findDotProduct(findL(intersect.point, camera.center), camera.normal) > 0) {
 					return true;
@@ -449,6 +456,11 @@ void Render::autoexposure()
 					   (pixels[i].color.g > highestColor) ? pixels[i].color.g :
 					   (pixels[i].color.b > highestColor) ? pixels[i].color.b :
 						highestColor;
+		if (highestColor > 255)
+		{
+			int a;
+			a = 4;
+		}
 	}
 
 	double scale = maxColor / highestColor;
@@ -497,3 +509,16 @@ void Render::setCameraValues(Camera cam)
 //{
 //	lightsVect.push_back(lit);
 //}
+
+
+void Render::createThreads(unsigned int numThread)
+{
+	vector<thread> threads;
+	for (unsigned int i = 0; i < numThread; i++) {
+		thread t(&Render::findAllIntersect, this, numThread, i);
+		threads.push_back(move(t));
+	}
+	for (unsigned int i = 0; i < numThread; i++) {
+		threads[i].join();
+	}
+}

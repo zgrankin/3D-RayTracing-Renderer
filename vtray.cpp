@@ -7,12 +7,18 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
+	//Render b("scene2.json", true);
+	//b.findAllIntersect(3);
+	//b.createThreads();
+	//b.createImage("threadsrule.png");
+
 	try {
 		if (argc == 3) {
 			string inputFilename = argv[1];
 			string outputFilename = argv[2];
 			Render b(inputFilename, true);
-			b.findAllIntersect();
+			//b.findAllIntersect(1);
+			b.createThreads(1);
 			b.createImage(outputFilename);
 		}
 		else if (argc == 5) {
@@ -23,7 +29,7 @@ int main(int argc, char *argv[])
 			string inputFilename = argv[3];
 			string outputFilename = argv[4];
 			Render b(inputFilename, true);
-			b.findAllIntersect();
+			b.createThreads(stoi(argv[2]));
 			b.createImage(outputFilename);
 		}
 		else if (argc != 3 && argc != 5) {

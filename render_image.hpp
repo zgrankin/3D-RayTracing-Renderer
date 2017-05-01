@@ -4,6 +4,8 @@
 #include <string>
 #include <qimage.h>
 #include <qcolor.h>
+#include <thread>
+#include <mutex>
 #include "json_parser.hpp"
 
 using namespace std;
@@ -33,19 +35,21 @@ public:
 	double findDotProduct(Location first, Location second);
 	double findThc(double radius, double d);
 	Location findClosestIntersect(Location focalPoint, Location Duv, double tca, double thc);
-	bool calculateIntersect(Location point);
-	bool determineClosestObject(vector<PointNColor> ip, vector<double> objLambertVect, vector<double> objNumbVect);
-	void findAllIntersect();
-	Color findLightContributionSphere(Location crossPoint, Location centerSphere, vector<Lights> lightSources);
-	Color findLightContributionPlane(Location crossPoint, Location centerPlane, vector<Lights> lightSources, Location nu);
+	bool calculateIntersect(Location point, PointNColor &intersectionP, double &currentObjectLambert, double &currentObjectNumber);
+	bool determineClosestObject(vector<PointNColor> ip, vector<double> objLambertVect, vector<double> objNumbVect, PointNColor &intersectionP, double &currentObjectLambert, double &currentObjectNumber);
+	void findAllIntersect(int numThreads, int curThread);
+	Color findLightContributionSphere(Location crossPoint, Location centerSphere, vector<Lights> lightSources, PointNColor intersectionP, double currentObjectLambert, double currentObjectNumber);
+	Color findLightContributionPlane(Location crossPoint, Location centerPlane, vector<Lights> lightSources, Location nu, PointNColor intersectionP, double currentObjectLambert, double currentObjectNumber);
 
-	Location findIntersectPlane(Location centerPlane, double objNumber, Location point, bool searchShadow);
+	Location findIntersectPlane(Location centerPlane, double objNumber, Location point, bool searchShadow, Location objectFocalForShadow);
 
 	bool shadowIntersect(Location F, Location lu, double lightMag, unsigned int objectIndex);
 
 	void multiplyColorByScale(Color &theColor, double scale);
 	Location multiplyVectorByScale(Location loc, double scale);
 	void autoexposure();
+
+	void createThreads(unsigned int numThread);
 
 	// Test functions
 	void setCameraValues(Camera cam);
@@ -66,11 +70,8 @@ private:
 	vector<PointNColor> pixels;
 	Color black;
 	Color white;
-	PointNColor intersectionP;
-	double currentObjectLambert;
-	double currentObjectNumber;
 
-	Location objectFocalForShadow;
+	Location emptyLoc;
 
 	Location upuv;
 	Location panRuv;

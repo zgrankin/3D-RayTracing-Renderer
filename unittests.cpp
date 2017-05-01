@@ -167,7 +167,7 @@ TEST_CASE("Test Case 1", "[geometry]") {
 TEST_CASE("Test scene0.json", "[geometry]") {
 	string jsonstuff = "{ \"camera\": {        \"center\": {            \"x\": 0,            \"y\": 0,            \"z\": 0        },        \"focus\": 10,        \"normal\": {            \"x\": 0,            \"y\": 0,            \"z\": 1        },        \"resolution\": [            0.01,            0.01        ],        \"size\": [            256,            256        ]    },    \"lights\": [        {            \"intensity\": 1,            \"location\": {                \"x\": 5,                \"y\": -5,                \"z\": 0            }        }    ],    \"objects\": [        {            \"center\": {                \"x\": 0,                \"y\": 0,                \"z\": 5            },            \"color\": {                \"b\": 0,                \"g\": 0,                \"r\": 255            },            \"lambert\": 1,            \"radius\": 1,            \"type\": \"sphere\"        }    ]}";
 	Render a(jsonstuff, false);
-	a.findAllIntersect();
+	a.findAllIntersect(1, 0);
 	a.autoexposure();
 }
 
@@ -175,7 +175,7 @@ TEST_CASE("Test scene0.json", "[geometry]") {
 TEST_CASE("Test scene1.json", "[geometry]") {
 	string jsonstuff = "{ \"camera\": {        \"center\": {            \"x\": 0,            \"y\": 0,            \"z\": 0        },        \"focus\": 10,        \"normal\": {            \"x\": 0,            \"y\": 0,            \"z\": 1        },        \"resolution\": [            0.01,            0.01        ],        \"size\": [            1024,            1024        ]    },    \"lights\": [        {            \"intensity\": 1,            \"location\": {                \"x\": 5,                \"y\": -5,                \"z\": 0            }        }    ],    \"objects\": [        {            \"center\": {                \"x\": 0,                \"y\": 0,                \"z\": 5            },            \"color\": {                \"b\": 0,                \"g\": 0,                \"r\": 255            },            \"lambert\": 1,            \"radius\": 1,            \"type\": \"sphere\"        },        {            \"center\": {                \"x\": 0,                \"y\": 5,                \"z\": 0            },            \"color\": {                \"b\": 255,                \"g\": 255,                \"r\": 255            },            \"lambert\": 1,            \"normal\": {                \"x\": 0,                \"y\": -1,                \"z\": 0            },            \"type\": \"plane\"        }    ]}";
 	Render a(jsonstuff, false);
-	a.findAllIntersect();
+	a.findAllIntersect(1, 0);
 	a.autoexposure();
 	a.createImage("");
 
