@@ -27,13 +27,13 @@ public:
 	void createImage(string filename);
 
 	Location findFocalPoint(); // find the coordinate values of the focus point
-	Location findL(Location centerObject, Location focalPoint); // distance from the focus to the center of the object
-	Location findDuv(Location point, Location focalPoint);
-	double magnitude(Location theVector);
-	Location findW(Location focalPoint, Location Duv, double tca);
-	double findMagnitudeFirstMinusSecond(Location w, Location centerObject);
-	double findDotProduct(Location first, Location second);
-	double findThc(double radius, double d);
+	Location findL(Location centerObject, Location focalPoint); // distance find vector between two points
+	Location findDuv(Location point, Location focalPoint); // find directional unit vector
+	double magnitude(Location theVector); // find magnitude
+	Location findW(Location focalPoint, Location Duv, double tca); // findW for sphere
+	double findMagnitudeFirstMinusSecond(Location w, Location centerObject); // find magnitude of vector between two points
+	double findDotProduct(Location first, Location second); // calculate dot product
+	double findThc(double radius, double d); // find thc for sphere
 	Location findClosestIntersect(Location focalPoint, Location Duv, double tca, double thc);
 	bool calculateIntersect(Location point, PointNColor &intersectionP, double &currentObjectLambert, double &currentObjectNumber);
 	bool determineClosestObject(vector<PointNColor> ip, vector<double> objLambertVect, vector<double> objNumbVect, PointNColor &intersectionP, double &currentObjectLambert, double &currentObjectNumber);

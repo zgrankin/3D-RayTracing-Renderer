@@ -7,11 +7,6 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-	//Render b("scene2.json", true);
-	//b.findAllIntersect(3);
-	//b.createThreads();
-	//b.createImage("threadsrule.png");
-
 	try {
 		if (argc == 3) {
 			string inputFilename = argv[1];
@@ -22,7 +17,8 @@ int main(int argc, char *argv[])
 			b.createImage(outputFilename);
 		}
 		else if (argc == 5) {
-			if (argv[1] != "-t") {
+			string command = argv[1];
+			if (command != "-t") {
 				cerr << "Error: Invalid command" << endl;
 				return EXIT_FAILURE;
 			}
@@ -41,6 +37,5 @@ int main(int argc, char *argv[])
 	{
 		return EXIT_FAILURE;
 	}
-
 	return EXIT_SUCCESS;
 }

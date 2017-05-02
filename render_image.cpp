@@ -18,10 +18,7 @@ Render::Render()
 	white.b = 255;
 	upuv.x = 0;
 	upuv.y = -1;
-	upuv.z = 0;
-	panRuv = findpanRuv(camera.normal, upuv);
-	panUuv = findpanUuv(panRuv, camera.normal);
-	pixels.resize(camera.size.first * camera.size.second);
+	upuv.z = 0;	
 }
 
 Render::Render(string filename, bool isFile)
@@ -300,7 +297,7 @@ void Render::findAllIntersect(int numThreads, int curThread)
 			}
 			mu.lock();
 			pixels[count] = pixel;
-			count++;
+			//count++;
 			mu.unlock();
 		}
 	}
@@ -509,7 +506,6 @@ void Render::setCameraValues(Camera cam)
 //{
 //	lightsVect.push_back(lit);
 //}
-
 
 void Render::createThreads(unsigned int numThread)
 {
